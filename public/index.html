@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>整理券 | Bon Voyage</title>
+  <style>
+    :root {
+      --bg: #08080f;
+      --surface: rgba(255,255,255,0.04);
+      --surface2: rgba(255,255,255,0.07);
+      --border: rgba(255,255,255,0.09);
+      --accent: #7c6cf0;
+      --accent2: #fd79a8;
+      --accent3: #55efc4;
+      --warning: #fdcb6e;
+      --danger: #ff7675;
+      --text: #eeeef8;
+      --muted: #6666aa;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body {
+      font-family: -apple-system, 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+    }
+    .bg-glow {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 70% 90% at 15% 40%, rgba(124,108,240,.14) 0%, transparent 60%),
+        radial-gradient(ellipse 55% 65% at 88% 18%, rgba(253,121,168,.09) 0%, transparent 60%),
+        radial-gradient(ellipse 45% 55% at 50% 88%, rgba(85,239,196,.07) 0%, transparent 60%);
+      animation: bgBreath 7s ease-in-out infinite alternate;
+    }
+    @keyframes bgBreath { from{opacity:.7} to{opacity:1} }
+
+    #root { position:relative; z-index:1; min-height:100dvh; }
+
+    /* ── Layout ── */
+    .page { max-width: 440px; margin: 0 auto; padding: 16px 18px 48px; }
+    .header { text-align:center; padding: 44px 0 30px; }
+    .badge {
+      display:inline-block; font-size:10px; font-weight:800;
+      letter-spacing:4px; text-transform:uppercase; color:var(--accent);
+      border:1px solid rgba(124,108,240,.3); border-radius:100px;
+      padding:4px 14px; margin-bottom:14px;
+    }
+    .header h1 {
+      font-size:26px; font-weight:800;
+      background:linear-gradient(135deg,#fff 30%,rgba(255,255,255,.55));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .header p { color:var(--muted); font-size:13px; margin-top:5px; }
+
+    /* ── Cards ── */
+    .card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:20px; padding:22px; margin-bottom:14px;
+      backdrop-filter:blur(12px);
+    }
+    .card.highlight {
+      background:rgba(124,108,240,.1);
+      border-color:rgba(124,108,240,.35);
+    }
+    .card.success {
+      background:rgba(85,239,196,.07);
+      border-color:rgba(85,239,196,.25);
+    }
+    .card.warn {
+      background:rgba(253,203,110,.07);
+      border-color:rgba(253,203,110,.2);
+    }
+
+    /* ── Ticket number display ── */
+    .ticket-box { text-align:center; padding:28px 16px 20px; }
+    .ticket-label {
+      font-size:10px; letter-spacing:3px; text-transform:uppercase;
+      color:var(--muted); margin-bottom:6px;
+    }
+    .ticket-num {
+      font-size:96px; font-weight:900; line-height:1;
+      font-variant-numeric:tabular-nums;
+      background:linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .ticket-num.dim {
+      background:none; -webkit-text-fill-color:var(--muted);
+    }
+    .ticket-num.calling {
+      animation:glowPulse 1.4s ease-in-out infinite;
+    }
+    @keyframes glowPulse {
+      0%,100%{ filter:drop-shadow(0 0 24px rgba(124,108,240,.5)) }
+      50%    { filter:drop-shadow(0 0 52px rgba(253,121,168,.85)) }
+    }
+
+    /* ── Status badge ── */
+    .status {
+      display:inline-flex; align-items:center; gap:7px;
+      padding:7px 16px; border-radius:100px;
+      font-size:13px; font-weight:700; margin-top:14px;
+    }
+    .dot { width:7px; height:7px; border-radius:50%; background:currentColor; }
+    .status.waiting { background:rgba(253,203,110,.12); color:var(--warning); border:1px solid rgba(253,203,110,.25); }
+    .status.called  { background:rgba(253,121,168,.15); color:var(--accent2); border:1px solid rgba(253,121,168,.3); }
+    .status.done    { background:rgba(85,239,196,.1);   color:var(--accent3); border:1px solid rgba(85,239,196,.22); }
+    .status.waiting .dot, .status.called .dot { animation:blink 1.1s ease infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    /* ── Called overlay ── */
+    .called-overlay {
+      position:fixed; inset:0; z-index:99; pointer-events:none;
+      background:rgba(124,108,240,.12);
+      animation:overlayPulse 1.4s ease infinite;
+    }
+    @keyframes overlayPulse { 0%,100%{opacity:0} 50%{opacity:1} }
+
+    /* ── Info rows ── */
+    .row {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:12px 0; border-bottom:1px solid var(--border);
+    }
+    .row:last-child { border-bottom:none; }
+    .row-label { font-size:13px; color:var(--muted); }
+    .row-value { font-size:15px; font-weight:700; }
+
+    /* ── Buttons ── */
+    .btn {
+      width:100%; padding:16px; border-radius:14px; border:none;
+      font-size:15px; font-weight:700; font-family:inherit;
+      cursor:pointer; transition:all .16s ease; letter-spacing:.4px;
+    }
+    .btn+.btn { margin-top:10px; }
+    .btn:disabled { opacity:.35; cursor:not-allowed; transform:none!important; }
+    .btn-primary {
+      background:linear-gradient(135deg, #7c6cf0, #a855f7);
+      color:#fff; box-shadow:0 4px 20px rgba(124,108,240,.35);
+    }
+    .btn-primary:not(:disabled):active { transform:scale(.97); }
+    .btn-primary:not(:disabled):hover { box-shadow:0 6px 28px rgba(124,108,240,.55); }
+    .btn-success {
+      background:linear-gradient(135deg, #55efc4, #00b894);
+      color:#0a2d22; box-shadow:0 4px 20px rgba(85,239,196,.25);
+    }
+    .btn-success:not(:disabled):active { transform:scale(.97); }
+    .btn-danger {
+      background:linear-gradient(135deg, #fd79a8, #e84393);
+      color:#fff; box-shadow:0 4px 20px rgba(253,121,168,.28);
+    }
+    .btn-ghost {
+      background:var(--surface2); color:var(--text);
+      border:1px solid var(--border);
+    }
+    .btn-ghost:not(:disabled):hover { background:rgba(255,255,255,.1); }
+    .btn-ghost:not(:disabled):active { transform:scale(.97); }
+
+    /* ── Staff queue list ── */
+    .queue-scroll { max-height:240px; overflow-y:auto; }
+    .q-item {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 14px; border-radius:10px; margin-bottom:6px;
+      background:rgba(255,255,255,.03); border:1px solid var(--border);
+    }
+    .q-item.active { background:rgba(253,121,168,.12); border-color:rgba(253,121,168,.3); }
+    .q-num { font-size:20px; font-weight:900; font-variant-numeric:tabular-nums; }
+    .q-pill {
+      font-size:10px; font-weight:800; padding:3px 10px;
+      border-radius:100px; letter-spacing:1px;
+    }
+    .q-pill.waiting { background:rgba(253,203,110,.13); color:var(--warning); }
+    .q-pill.called  { background:rgba(253,121,168,.15); color:var(--accent2); }
+
+    /* ── PIN screen ── */
+    .pin-dots { display:flex; gap:12px; justify-content:center; margin:20px 0 24px; }
+    .pin-dot {
+      width:14px; height:14px; border-radius:50%;
+      border:2px solid var(--border); transition:all .15s;
+    }
+    .pin-dot.on { background:var(--accent); border-color:var(--accent); }
+    .pin-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .pin-key {
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:12px; padding:18px; font-size:20px; font-weight:700;
+      cursor:pointer; color:var(--text); font-family:inherit;
+      transition:all .12s;
+    }
+    .pin-key:active { transform:scale(.93); background:rgba(124,108,240,.2); }
+    .pin-key.del { font-size:16px; color:var(--muted); }
+
+    /* ── Display board ── */
+    .display-root {
+      min-height:100dvh; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; text-align:center; padding:24px;
+      position:relative;
+    }
+    .display-header {
+      position:absolute; top:24px; left:0; right:0; text-align:center;
+      font-size:11px; letter-spacing:4px; color:var(--muted);
+    }
+    .display-label { font-size:14px; letter-spacing:5px; text-transform:uppercase; color:var(--muted); }
+    .display-num {
+      font-size:clamp(100px,28vw,200px); font-weight:900; line-height:.95;
+      background:linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      animation:glowPulse 2s ease infinite;
+    }
+    .display-num.empty { background:none; -webkit-text-fill-color:var(--muted); animation:none; }
+    .display-caption { font-size:18px; color:var(--muted); margin-top:20px; }
+    .display-wait-label { font-size:13px; letter-spacing:3px; color:var(--muted); margin-top:48px; }
+    .display-wait-num { font-size:72px; font-weight:900; color:var(--accent3); line-height:1; }
+    .display-wait-unit { font-size:16px; color:var(--muted); }
+
+    /* ── Open/close pill ── */
+    .open-pill {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:5px 14px; border-radius:100px; font-size:12px; font-weight:700;
+    }
+    .open-pill.open   { background:rgba(85,239,196,.1); color:var(--accent3); }
+    .open-pill.closed { background:rgba(255,118,117,.1); color:var(--danger); }
+
+    /* ── Section title ── */
+    .sec { font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
+
+    /* ── Staff current number ── */
+    .staff-big {
+      text-align:center; padding:16px 0;
+    }
+    .staff-big-num {
+      font-size:72px; font-weight:900;
+      background:linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .staff-big-num.none { background:none; -webkit-text-fill-color:var(--muted); }
+    .staff-big-sub { font-size:13px; color:var(--muted); margin-top:4px; }
+
+    /* ── Toast ── */
+    .toast {
+      position:fixed; bottom:26px; left:50%; z-index:9999;
+      transform:translateX(-50%) translateY(80px);
+      background:rgba(16,16,28,.96); border:1px solid rgba(124,108,240,.25);
+      color:var(--text); padding:12px 22px; border-radius:12px;
+      font-size:14px; font-weight:600; transition:transform .26s ease;
+      backdrop-filter:blur(20px); white-space:nowrap; pointer-events:none;
+    }
+    .toast.show { transform:translateX(-50%) translateY(0); }
+
+    /* ── Loader ── */
+    .loader { display:flex; align-items:center; justify-content:center; padding:100px; }
+    .spin {
+      width:36px; height:36px; border-radius:50%;
+      border:3px solid rgba(124,108,240,.2); border-top-color:var(--accent);
+      animation:spin .7s linear infinite;
+    }
+    @keyframes spin { to{transform:rotate(360deg)} }
+
+    .sp { height:10px; }
+    .link { color:var(--muted); font-size:12px; text-decoration:none; }
+    .link:hover { color:var(--accent); }
+    .center { text-align:center; }
+  </style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+  <div id="root"><div class="loader"><div class="spin"></div></div></div>
+  <div class="toast" id="toast"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script>
+  // ─── Config ────────────────────────────────────────────────────
+  const STAFF_PIN = '1234'; // スタッフ用PIN (変更可)
+
+  firebase.initializeApp({
+    apiKey: "AIzaSyCo8HLv4X8PxJmQGjhNtwePqEFLALs2vBA",
+    authDomain: "ticekets-f3625.firebaseapp.com",
+    projectId: "ticekets-f3625",
+    storageBucket: "ticekets-f3625.firebasestorage.app",
+    messagingSenderId: "463034107039",
+    appId: "1:463034107039:web:9528b908a43083f518ceaa"
+  });
+  const db = firebase.firestore();
+
+  // ─── Mode ──────────────────────────────────────────────────────
+  // ?mode=staff  → スタッフ管理画面
+  // ?mode=display → 大型表示ボード
+  // (default)    → お客様画面
+  const MODE = new URLSearchParams(location.search).get('mode') || 'customer';
+
+  // ─── Session ID (per-browser) ──────────────────────────────────
+  let sid = localStorage.getItem('bv_sid');
+  if (!sid) { sid = Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem('bv_sid',sid); }
+
+  // ─── State ─────────────────────────────────────────────────────
+  let cfg       = null;   // Firestore config/queue document
+  let myTicket  = null;   // my ticket { id, number, status }
+  let tickets   = [];     // active tickets (waiting|called)
+  let pinBuf    = '';
+  let staffOk   = false;
+
+  // ─── Toast ─────────────────────────────────────────────────────
+  let toastT;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastT);
+    toastT = setTimeout(() => el.classList.remove('show'), 2800);
+  }
+
+  // ─── Sound ─────────────────────────────────────────────────────
+  function playChime() {
+    try {
+      const ctx = new AudioContext();
+      [[523.25,0],[659.25,.18],[783.99,.36],[1046.5,.54]].forEach(([f,t]) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(.25, ctx.currentTime+t);
+        g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+t+.7);
+        o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.75);
+      });
+    } catch(e) {}
+  }
+
+  // ─── Firestore helpers ─────────────────────────────────────────
+  const cfgRef = db.collection('config').doc('queue');
+
+  async function ensureConfig() {
+    const snap = await cfgRef.get();
+    if (!snap.exists) {
+      await cfgRef.set({ isOpen:true, nextNumber:1, calledNumber:null, calledTicketId:null });
+    }
+  }
+
+  // ─── Listeners ────────────────────────────────────────────────
+  function startListeners() {
+    ensureConfig();
+
+    // Config
+    cfgRef.onSnapshot(snap => {
+      if (!snap.exists) return;
+      cfg = snap.data();
+      render();
+    });
+
+    // Active tickets
+    db.collection('tickets')
+      .where('status','in',['waiting','called'])
+      .orderBy('number','asc')
+      .onSnapshot(snap => {
+        tickets = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        render();
+      });
+
+    // Own ticket
+    const savedId = localStorage.getItem('bv_ticket_id');
+    if (savedId && MODE === 'customer') listenMyTicket(savedId);
+  }
+
+  function listenMyTicket(id) {
+    db.collection('tickets').doc(id).onSnapshot(snap => {
+      if (!snap.exists) { clearMyTicket(); return; }
+      const data = snap.data();
+      if (data.status === 'cancelled' || data.status === 'done' && !myTicket) {
+        clearMyTicket(); return;
+      }
+      const prevStatus = myTicket?.status;
+      myTicket = { id:snap.id, ...data };
+      if (prevStatus === 'waiting' && myTicket.status === 'called') {
+        playChime();
+        if (navigator.vibrate) navigator.vibrate([200,80,200,80,300]);
+        toast('🔔 あなたの番号が呼ばれました！');
+      }
+      render();
+    });
+  }
+
+  function clearMyTicket() {
+    myTicket = null;
+    localStorage.removeItem('bv_ticket_id');
+    render();
+  }
+
+  // ─── Customer actions ──────────────────────────────────────────
+  async function getTicket() {
+    if (!cfg?.isOpen) { toast('現在受付を停止しています'); return; }
+    if (localStorage.getItem('bv_ticket_id')) { toast('すでに整理券をお持ちです'); return; }
+    const btn = document.getElementById('btn-get');
+    if (btn) btn.disabled = true;
+    try {
+      const num = cfg.nextNumber;
+      const ref = await db.collection('tickets').add({
+        number:num, status:'waiting', sid,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(), calledAt:null
+      });
+      await cfgRef.update({ nextNumber:firebase.firestore.FieldValue.increment(1) });
+      localStorage.setItem('bv_ticket_id', ref.id);
+      myTicket = { id:ref.id, number:num, status:'waiting' };
+      listenMyTicket(ref.id);
+      toast(`整理券 No.${pad(num)} を取得しました`);
+    } catch(e) {
+      toast('エラーが発生しました。再試行してください');
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function cancelTicket() {
+    if (!myTicket) return;
+    if (!confirm('整理券をキャンセルしますか？')) return;
+    await db.collection('tickets').doc(myTicket.id).update({ status:'cancelled' });
+    clearMyTicket();
+    toast('整理券をキャンセルしました');
+  }
+
+  // ─── Staff actions ─────────────────────────────────────────────
+  async function callNext() {
+    const waiting = tickets.filter(t => t.status === 'waiting');
+    if (tickets.some(t => t.status === 'called')) { toast('現在対応中です。完了後に次を呼んでください'); return; }
+    if (waiting.length === 0) { toast('待機中のお客様はいません'); return; }
+    const next = waiting[0];
+    try {
+      await db.collection('tickets').doc(next.id).update({
+        status:'called', calledAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await cfgRef.update({ calledNumber:next.number, calledTicketId:next.id });
+      toast(`No.${pad(next.number)} を呼び出しました`);
+    } catch(e) { toast('エラーが発生しました'); }
+  }
+
+  async function markDone() {
+    const calling = tickets.find(t => t.status === 'called');
+    if (!calling) { toast('呼び出し中のお客様がいません'); return; }
+    try {
+      await db.collection('tickets').doc(calling.id).update({
+        status:'done', doneAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await cfgRef.update({ calledNumber:null, calledTicketId:null });
+      toast(`No.${pad(calling.number)} — 対応完了`);
+    } catch(e) { toast('エラーが発生しました'); }
+  }
+
+  async function toggleOpen() {
+    if (!cfg) return;
+    await cfgRef.update({ isOpen:!cfg.isOpen });
+    toast(cfg.isOpen ? '受付を停止しました' : '受付を再開しました');
+  }
+
+  async function resetAll() {
+    if (!confirm('全ての整理券データをリセットしますか？\nこの操作は取り消せません。')) return;
+    const snap = await db.collection('tickets').get();
+    const batch = db.batch();
+    snap.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    await cfgRef.set({ isOpen:true, nextNumber:1, calledNumber:null, calledTicketId:null });
+    toast('リセットしました');
+  }
+
+  // ─── PIN ──────────────────────────────────────────────────────
+  function pinKey(v) {
+    if (v === 'del') pinBuf = pinBuf.slice(0,-1);
+    else if (pinBuf.length < 4) pinBuf += v;
+    if (pinBuf.length === 4) {
+      if (pinBuf === STAFF_PIN) { staffOk = true; toast('ログイン成功'); }
+      else { toast('PINが違います'); pinBuf = ''; }
+    }
+    render();
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────
+  function pad(n) { return String(n).padStart(2,'0'); }
+
+  // ─── Render ───────────────────────────────────────────────────
+  function render() {
+    if (!cfg) return;
+    const root = document.getElementById('root');
+    if (MODE === 'display') { root.innerHTML = renderDisplay(); return; }
+    if (MODE === 'staff')   { root.innerHTML = staffOk ? renderStaff() : renderPin(); }
+    else                    { root.innerHTML = renderCustomer(); }
+    bindEvents();
+  }
+
+  // ── Customer ──
+  function renderCustomer() {
+    const calling = tickets.find(t => t.status === 'called');
+    const waitList = tickets.filter(t => t.status === 'waiting');
+
+    if (!myTicket) {
+      return `
+        <div class="page">
+          <div class="header">
+            <div class="badge">BON VOYAGE</div>
+            <h1>整理券システム</h1>
+            <p>文化祭 会計受付</p>
+          </div>
+          <div class="card">
+            <div class="ticket-box">
+              <div class="ticket-label">NEXT NUMBER</div>
+              <div class="ticket-num ${!cfg.isOpen?'dim':''}">
+                ${cfg.isOpen ? `No.${pad(cfg.nextNumber)}` : '--'}
+              </div>
+              <div style="color:var(--muted);font-size:12px;margin-top:6px">
+                ${cfg.isOpen ? '次の発行番号' : '現在受付停止中'}
+              </div>
+            </div>
+          </div>
+          ${!cfg.isOpen ? `
+            <div class="card warn" style="text-align:center;padding:16px">
+              <div style="font-size:14px;font-weight:700;color:var(--warning)">現在受付を停止しています</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div>
+            </div>
+          ` : ''}
+          <button class="btn btn-primary" id="btn-get" ${!cfg.isOpen?'disabled':''}>
+            整理券を取る
+          </button>
+          ${calling ? `
+            <div class="card" style="margin-top:14px">
+              <div class="row"><span class="row-label">現在対応中</span><span class="row-value">No.${pad(calling.number)}</span></div>
+              <div class="row"><span class="row-label">待機人数</span><span class="row-value">${waitList.length}人</span></div>
+            </div>
+          ` : ''}
+          <div class="center" style="margin-top:20px">
+            <a class="link" href="?mode=display" target="_blank">📺 表示ボードを開く</a>
+          </div>
+        </div>`;
+    }
+
+    if (myTicket.status === 'done') {
+      return `
+        <div class="page">
+          <div class="header">
+            <div class="badge">BON VOYAGE</div>
+            <h1>整理券システム</h1>
+          </div>
+          <div class="card success" style="text-align:center;padding:32px 20px">
+            <div style="font-size:48px">🎉</div>
+            <div style="font-size:18px;font-weight:800;margin-top:12px;color:var(--accent3)">対応が完了しました</div>
+            <div style="color:var(--muted);font-size:13px;margin-top:6px">ご利用ありがとうございました</div>
+            <div style="margin-top:24px;font-size:11px;letter-spacing:2px;color:var(--muted)">YOUR NUMBER</div>
+            <div style="font-size:52px;font-weight:900;color:var(--accent3);line-height:1">No.${pad(myTicket.number)}</div>
+          </div>
+          <button class="btn btn-ghost" id="btn-new">新しい整理券を取る</button>
+        </div>`;
+    }
+
+    const isCalled = myTicket.status === 'called';
+    const ahead = waitList.filter(t => t.number < myTicket.number).length;
+
+    return `
+      ${isCalled ? '<div class="called-overlay"></div>' : ''}
+      <div class="page">
+        <div class="header">
+          <div class="badge">BON VOYAGE</div>
+          <h1>整理券システム</h1>
+        </div>
+        <div class="card ${isCalled?'highlight':''}">
+          <div class="ticket-box">
+            <div class="ticket-label">あなたの整理券</div>
+            <div class="ticket-num ${isCalled?'calling':''}">No.${pad(myTicket.number)}</div>
+            <div>
+              <span class="status ${myTicket.status}">
+                <span class="dot"></span>
+                ${myTicket.status==='waiting'?'順番待ち中':'🔔 呼び出し中！'}
+              </span>
+            </div>
+          </div>
+        </div>
+        ${isCalled ? `
+          <div class="card highlight" style="text-align:center;padding:20px">
+            <div style="font-size:22px;font-weight:900;color:#a29bfe">📢 お呼びしています！</div>
+            <div style="font-size:14px;color:var(--muted);margin-top:6px">会計カウンターまでお越しください</div>
+          </div>
+        ` : `
+          <div class="card">
+            ${calling?`<div class="row"><span class="row-label">現在対応中</span><span class="row-value">No.${pad(calling.number)}</span></div>`:''}
+            <div class="row"><span class="row-label">あなたの前</span><span class="row-value">${ahead}人</span></div>
+            <div class="row"><span class="row-label">合計待機</span><span class="row-value">${waitList.length}人</span></div>
+          </div>
+        `}
+        <div class="sp"></div>
+        <button class="btn btn-ghost" id="btn-cancel" style="font-size:13px;padding:12px;color:var(--muted)">
+          整理券をキャンセル
+        </button>
+      </div>`;
+  }
+
+  // ── Staff ──
+  function renderStaff() {
+    const calling = tickets.find(t => t.status === 'called');
+    const waitList = tickets.filter(t => t.status === 'waiting');
+    const hasCalling = !!calling;
+    const hasWaiting = waitList.length > 0;
+
+    return `
+      <div class="page">
+        <div class="header">
+          <div class="badge">STAFF PANEL</div>
+          <h1>スタッフ管理</h1>
+          <div style="margin-top:10px">
+            <span class="open-pill ${cfg.isOpen?'open':'closed'}">
+              ● ${cfg.isOpen?'受付中':'受付停止'}
+            </span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="sec">現在の呼び出し</div>
+          <div class="staff-big">
+            <div class="staff-big-num ${!calling?'none':''}">
+              ${calling?`No.${pad(calling.number)}`:'---'}
+            </div>
+            <div class="staff-big-sub">${calling?'対応中':'待機中'}</div>
+          </div>
+          <button class="btn btn-primary" id="btn-next"
+            ${hasCalling||!hasWaiting?'disabled':''}>
+            次を呼ぶ${hasWaiting?` (残り${waitList.length}人)`:' (待機なし)'}
+          </button>
+          ${hasCalling?'<div class="sp"></div>':''}
+          <button class="btn btn-success" id="btn-done" ${!hasCalling?'disabled':''}>
+            対応完了 ✓
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="sec">待機リスト (${waitList.length}人)</div>
+          <div class="queue-scroll">
+            ${tickets.length===0
+              ? '<div style="color:var(--muted);text-align:center;padding:20px;font-size:13px">待機中のお客様はいません</div>'
+              : tickets.map(t=>`
+                  <div class="q-item ${t.status==='called'?'active':''}">
+                    <span class="q-num">No.${pad(t.number)}</span>
+                    <span class="q-pill ${t.status}">${t.status==='called'?'呼出中':'待機中'}</span>
+                  </div>`).join('')
+            }
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="sec">設定</div>
+          <button class="btn btn-ghost" id="btn-toggle" style="margin-bottom:10px">
+            ${cfg.isOpen?'受付を停止する':'受付を再開する'}
+          </button>
+          <button class="btn" id="btn-reset"
+            style="background:rgba(255,118,117,.08);color:var(--danger);border:1px solid rgba(255,118,117,.2)">
+            全データをリセット
+          </button>
+        </div>
+
+        <div class="center" style="margin-top:14px">
+          <a class="link" href="?mode=display" target="_blank">📺 表示ボードを別タブで開く</a>
+        </div>
+      </div>`;
+  }
+
+  // ── PIN ──
+  function renderPin() {
+    return `
+      <div class="page">
+        <div class="header">
+          <div class="badge">STAFF</div>
+          <h1>スタッフログイン</h1>
+          <p>PINコードを入力してください</p>
+        </div>
+        <div class="card">
+          <div class="pin-dots">
+            ${[0,1,2,3].map(i=>`<div class="pin-dot ${i<pinBuf.length?'on':''}"></div>`).join('')}
+          </div>
+          <div class="pin-grid">
+            ${[1,2,3,4,5,6,7,8,9].map(n=>`
+              <button class="pin-key" onclick="pinKey('${n}')">${n}</button>
+            `).join('')}
+            <div></div>
+            <button class="pin-key" onclick="pinKey('0')">0</button>
+            <button class="pin-key del" onclick="pinKey('del')">⌫</button>
+          </div>
+        </div>
+        <div class="center" style="margin-top:16px">
+          <a class="link" href="/">← 一般画面に戻る</a>
+        </div>
+      </div>`;
+  }
+
+  // ── Display ──
+  function renderDisplay() {
+    const num = cfg?.calledNumber;
+    const waitCount = tickets.filter(t=>t.status==='waiting').length;
+    return `
+      <div class="display-root">
+        <div class="display-header">BON VOYAGE — 文化祭 会計受付</div>
+        <div class="display-label">現在対応中</div>
+        <div class="display-num ${!num?'empty':''}">
+          ${num?`No.${pad(num)}`:'---'}
+        </div>
+        <div class="display-caption">
+          ${num?'カウンターまでお越しください':cfg?.isOpen?'順番をお待ちください':'現在受付停止中'}
+        </div>
+        <div class="display-wait-label">WAITING</div>
+        <div class="display-wait-num">${waitCount}</div>
+        <div class="display-wait-unit">人待機中</div>
+      </div>`;
+  }
+
+  // ─── Event binding ────────────────────────────────────────────
+  function bindEvents() {
+    document.getElementById('btn-get')?.addEventListener('click', getTicket);
+    document.getElementById('btn-cancel')?.addEventListener('click', cancelTicket);
+    document.getElementById('btn-new')?.addEventListener('click', () => { clearMyTicket(); });
+    document.getElementById('btn-next')?.addEventListener('click', callNext);
+    document.getElementById('btn-done')?.addEventListener('click', markDone);
+    document.getElementById('btn-toggle')?.addEventListener('click', toggleOpen);
+    document.getElementById('btn-reset')?.addEventListener('click', resetAll);
+  }
+
+  // ─── Start ────────────────────────────────────────────────────
+  startListeners();
+  </script>
+</body>
+</html>

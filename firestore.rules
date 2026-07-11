@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 文化祭用: 全員読み書き可 (期間限定利用のため)
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
