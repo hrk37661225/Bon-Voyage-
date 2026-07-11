@@ -2,262 +2,161 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>整理券 | Bon Voyage</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>整理券</title>
   <style>
     :root {
-      --bg: #08080f;
-      --surface: rgba(255,255,255,0.04);
-      --surface2: rgba(255,255,255,0.07);
-      --border: rgba(255,255,255,0.09);
-      --accent: #7c6cf0;
-      --accent2: #fd79a8;
-      --accent3: #55efc4;
-      --warning: #fdcb6e;
-      --danger: #ff7675;
-      --text: #eeeef8;
-      --muted: #6666aa;
+      --bg:#08080f; --surface:rgba(255,255,255,.04); --surface2:rgba(255,255,255,.07);
+      --border:rgba(255,255,255,.09); --accent:#7c6cf0; --accent2:#fd79a8;
+      --accent3:#55efc4; --warning:#fdcb6e; --danger:#ff7675;
+      --text:#eeeef8; --muted:#6666aa; --glow:124,108,240;
     }
-    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-    body {
-      font-family: -apple-system, 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100dvh;
-    }
-    .bg-glow {
-      position: fixed; inset: 0; pointer-events: none; z-index: 0;
-      background:
-        radial-gradient(ellipse 70% 90% at 15% 40%, rgba(124,108,240,.14) 0%, transparent 60%),
-        radial-gradient(ellipse 55% 65% at 88% 18%, rgba(253,121,168,.09) 0%, transparent 60%),
-        radial-gradient(ellipse 45% 55% at 50% 88%, rgba(85,239,196,.07) 0%, transparent 60%);
-      animation: bgBreath 7s ease-in-out infinite alternate;
-    }
-    @keyframes bgBreath { from{opacity:.7} to{opacity:1} }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{font-family:-apple-system,'Hiragino Kaku Gothic ProN','Yu Gothic UI',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;transition:background .4s}
+    .bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;
+      background:radial-gradient(ellipse 70% 90% at 15% 40%,rgba(var(--glow),.14) 0%,transparent 60%),
+                radial-gradient(ellipse 55% 65% at 88% 18%,rgba(var(--glow),.08) 0%,transparent 60%),
+                radial-gradient(ellipse 45% 55% at 50% 88%,rgba(var(--glow),.06) 0%,transparent 60%);
+      animation:bgBreath 7s ease-in-out infinite alternate}
+    @keyframes bgBreath{from{opacity:.7}to{opacity:1}}
+    #root{position:relative;z-index:1;min-height:100dvh}
 
-    #root { position:relative; z-index:1; min-height:100dvh; }
+    /* Layout */
+    .page{max-width:440px;margin:0 auto;padding:16px 18px 52px}
+    .header{text-align:center;padding:40px 0 26px}
+    .badge{display:inline-block;font-size:10px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:var(--accent);border:1px solid rgba(var(--glow),.3);border-radius:100px;padding:4px 14px;margin-bottom:12px}
+    .header h1{font-size:24px;font-weight:800;background:linear-gradient(135deg,#fff 30%,rgba(255,255,255,.5));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .store-sub{color:var(--muted);font-size:13px;margin-top:4px}
+    .store-loc{color:var(--accent3);font-size:12px;margin-top:3px}
 
-    /* ── Layout ── */
-    .page { max-width: 440px; margin: 0 auto; padding: 16px 18px 48px; }
-    .header { text-align:center; padding: 44px 0 30px; }
-    .badge {
-      display:inline-block; font-size:10px; font-weight:800;
-      letter-spacing:4px; text-transform:uppercase; color:var(--accent);
-      border:1px solid rgba(124,108,240,.3); border-radius:100px;
-      padding:4px 14px; margin-bottom:14px;
-    }
-    .header h1 {
-      font-size:26px; font-weight:800;
-      background:linear-gradient(135deg,#fff 30%,rgba(255,255,255,.55));
-      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-    }
-    .header p { color:var(--muted); font-size:13px; margin-top:5px; }
+    /* Cards */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:22px;margin-bottom:14px;backdrop-filter:blur(12px)}
+    .card.highlight{background:rgba(var(--glow),.1);border-color:rgba(var(--glow),.35)}
+    .card.success{background:rgba(85,239,196,.07);border-color:rgba(85,239,196,.25)}
+    .card.warn{background:rgba(253,203,110,.07);border-color:rgba(253,203,110,.2)}
 
-    /* ── Cards ── */
-    .card {
-      background:var(--surface); border:1px solid var(--border);
-      border-radius:20px; padding:22px; margin-bottom:14px;
-      backdrop-filter:blur(12px);
-    }
-    .card.highlight {
-      background:rgba(124,108,240,.1);
-      border-color:rgba(124,108,240,.35);
-    }
-    .card.success {
-      background:rgba(85,239,196,.07);
-      border-color:rgba(85,239,196,.25);
-    }
-    .card.warn {
-      background:rgba(253,203,110,.07);
-      border-color:rgba(253,203,110,.2);
-    }
+    /* Ticket */
+    .ticket-box{text-align:center;padding:24px 16px 18px}
+    .ticket-label{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+    .ticket-num{font-size:90px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .ticket-num.dim{background:none;-webkit-text-fill-color:var(--muted)}
+    .ticket-num.calling{animation:glowPulse 1.4s ease-in-out infinite}
+    @keyframes glowPulse{0%,100%{filter:drop-shadow(0 0 24px rgba(var(--glow),.5))}50%{filter:drop-shadow(0 0 52px rgba(var(--glow),.9))}}
 
-    /* ── Ticket number display ── */
-    .ticket-box { text-align:center; padding:28px 16px 20px; }
-    .ticket-label {
-      font-size:10px; letter-spacing:3px; text-transform:uppercase;
-      color:var(--muted); margin-bottom:6px;
-    }
-    .ticket-num {
-      font-size:96px; font-weight:900; line-height:1;
-      font-variant-numeric:tabular-nums;
-      background:linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-    }
-    .ticket-num.dim {
-      background:none; -webkit-text-fill-color:var(--muted);
-    }
-    .ticket-num.calling {
-      animation:glowPulse 1.4s ease-in-out infinite;
-    }
-    @keyframes glowPulse {
-      0%,100%{ filter:drop-shadow(0 0 24px rgba(124,108,240,.5)) }
-      50%    { filter:drop-shadow(0 0 52px rgba(253,121,168,.85)) }
-    }
+    /* Status */
+    .status{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:100px;font-size:13px;font-weight:700;margin-top:12px}
+    .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+    .status.waiting{background:rgba(253,203,110,.12);color:var(--warning);border:1px solid rgba(253,203,110,.25)}
+    .status.called{background:rgba(var(--glow),.18);color:var(--accent2);border:1px solid rgba(var(--glow),.3)}
+    .status.done{background:rgba(85,239,196,.1);color:var(--accent3);border:1px solid rgba(85,239,196,.22)}
+    .status.waiting .dot,.status.called .dot{animation:blink 1.1s ease infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 
-    /* ── Status badge ── */
-    .status {
-      display:inline-flex; align-items:center; gap:7px;
-      padding:7px 16px; border-radius:100px;
-      font-size:13px; font-weight:700; margin-top:14px;
-    }
-    .dot { width:7px; height:7px; border-radius:50%; background:currentColor; }
-    .status.waiting { background:rgba(253,203,110,.12); color:var(--warning); border:1px solid rgba(253,203,110,.25); }
-    .status.called  { background:rgba(253,121,168,.15); color:var(--accent2); border:1px solid rgba(253,121,168,.3); }
-    .status.done    { background:rgba(85,239,196,.1);   color:var(--accent3); border:1px solid rgba(85,239,196,.22); }
-    .status.waiting .dot, .status.called .dot { animation:blink 1.1s ease infinite; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+    /* Called overlay */
+    .called-overlay{position:fixed;inset:0;z-index:99;pointer-events:none;background:rgba(var(--glow),.1);animation:overlayPulse 1.4s ease infinite}
+    @keyframes overlayPulse{0%,100%{opacity:0}50%{opacity:1}}
 
-    /* ── Called overlay ── */
-    .called-overlay {
-      position:fixed; inset:0; z-index:99; pointer-events:none;
-      background:rgba(124,108,240,.12);
-      animation:overlayPulse 1.4s ease infinite;
-    }
-    @keyframes overlayPulse { 0%,100%{opacity:0} 50%{opacity:1} }
+    /* Info rows */
+    .row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border)}
+    .row:last-child{border-bottom:none}
+    .row-label{font-size:13px;color:var(--muted)}
+    .row-value{font-size:15px;font-weight:700}
 
-    /* ── Info rows ── */
-    .row {
-      display:flex; justify-content:space-between; align-items:center;
-      padding:12px 0; border-bottom:1px solid var(--border);
-    }
-    .row:last-child { border-bottom:none; }
-    .row-label { font-size:13px; color:var(--muted); }
-    .row-value { font-size:15px; font-weight:700; }
+    /* Buttons */
+    .btn{width:100%;padding:16px;border-radius:14px;border:none;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .16s ease;letter-spacing:.4px}
+    .btn+.btn{margin-top:10px}
+    .btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
+    .btn-primary{background:linear-gradient(135deg,var(--accent),#a855f7);color:#fff;box-shadow:0 4px 20px rgba(var(--glow),.35)}
+    .btn-primary:not(:disabled):active{transform:scale(.97)}
+    .btn-success{background:linear-gradient(135deg,#55efc4,#00b894);color:#0a2d22;box-shadow:0 4px 20px rgba(85,239,196,.25)}
+    .btn-success:not(:disabled):active{transform:scale(.97)}
+    .btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+    .btn-ghost:not(:disabled):active{transform:scale(.97)}
+    .btn-icon{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;padding:6px 10px;font-size:16px}
 
-    /* ── Buttons ── */
-    .btn {
-      width:100%; padding:16px; border-radius:14px; border:none;
-      font-size:15px; font-weight:700; font-family:inherit;
-      cursor:pointer; transition:all .16s ease; letter-spacing:.4px;
-    }
-    .btn+.btn { margin-top:10px; }
-    .btn:disabled { opacity:.35; cursor:not-allowed; transform:none!important; }
-    .btn-primary {
-      background:linear-gradient(135deg, #7c6cf0, #a855f7);
-      color:#fff; box-shadow:0 4px 20px rgba(124,108,240,.35);
-    }
-    .btn-primary:not(:disabled):active { transform:scale(.97); }
-    .btn-primary:not(:disabled):hover { box-shadow:0 6px 28px rgba(124,108,240,.55); }
-    .btn-success {
-      background:linear-gradient(135deg, #55efc4, #00b894);
-      color:#0a2d22; box-shadow:0 4px 20px rgba(85,239,196,.25);
-    }
-    .btn-success:not(:disabled):active { transform:scale(.97); }
-    .btn-danger {
-      background:linear-gradient(135deg, #fd79a8, #e84393);
-      color:#fff; box-shadow:0 4px 20px rgba(253,121,168,.28);
-    }
-    .btn-ghost {
-      background:var(--surface2); color:var(--text);
-      border:1px solid var(--border);
-    }
-    .btn-ghost:not(:disabled):hover { background:rgba(255,255,255,.1); }
-    .btn-ghost:not(:disabled):active { transform:scale(.97); }
+    /* Staff call count control */
+    .ctrl-row{display:flex;align-items:center;justify-content:center;gap:16px;padding:10px 0}
+    .ctrl-btn{width:48px;height:48px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:22px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
+    .ctrl-btn:not(:disabled):active{transform:scale(.92);background:rgba(var(--glow),.2)}
+    .ctrl-btn:disabled{opacity:.3;cursor:not-allowed}
+    .ctrl-num{font-size:48px;font-weight:900;line-height:1;min-width:80px;text-align:center;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .ctrl-unit{font-size:14px;font-weight:400;color:var(--muted);margin-top:6px}
 
-    /* ── Staff queue list ── */
-    .queue-scroll { max-height:240px; overflow-y:auto; }
-    .q-item {
-      display:flex; align-items:center; justify-content:space-between;
-      padding:10px 14px; border-radius:10px; margin-bottom:6px;
-      background:rgba(255,255,255,.03); border:1px solid var(--border);
-    }
-    .q-item.active { background:rgba(253,121,168,.12); border-color:rgba(253,121,168,.3); }
-    .q-num { font-size:20px; font-weight:900; font-variant-numeric:tabular-nums; }
-    .q-pill {
-      font-size:10px; font-weight:800; padding:3px 10px;
-      border-radius:100px; letter-spacing:1px;
-    }
-    .q-pill.waiting { background:rgba(253,203,110,.13); color:var(--warning); }
-    .q-pill.called  { background:rgba(253,121,168,.15); color:var(--accent2); }
+    /* Stats row */
+    .stats-row{display:flex;gap:10px;margin-bottom:14px}
+    .stat-box{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 10px;text-align:center}
+    .stat-num{font-size:26px;font-weight:900}
+    .stat-label{font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:1px}
 
-    /* ── PIN screen ── */
-    .pin-dots { display:flex; gap:12px; justify-content:center; margin:20px 0 24px; }
-    .pin-dot {
-      width:14px; height:14px; border-radius:50%;
-      border:2px solid var(--border); transition:all .15s;
-    }
-    .pin-dot.on { background:var(--accent); border-color:var(--accent); }
-    .pin-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-    .pin-key {
-      background:var(--surface2); border:1px solid var(--border);
-      border-radius:12px; padding:18px; font-size:20px; font-weight:700;
-      cursor:pointer; color:var(--text); font-family:inherit;
-      transition:all .12s;
-    }
-    .pin-key:active { transform:scale(.93); background:rgba(124,108,240,.2); }
-    .pin-key.del { font-size:16px; color:var(--muted); }
+    /* Queue list */
+    .queue-scroll{max-height:220px;overflow-y:auto}
+    .q-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:10px;margin-bottom:6px;background:rgba(255,255,255,.03);border:1px solid var(--border)}
+    .q-item.active{background:rgba(var(--glow),.12);border-color:rgba(var(--glow),.3)}
+    .q-num{font-size:20px;font-weight:900;font-variant-numeric:tabular-nums}
+    .q-pill{font-size:10px;font-weight:800;padding:3px 10px;border-radius:100px;letter-spacing:1px}
+    .q-pill.waiting{background:rgba(253,203,110,.13);color:var(--warning)}
+    .q-pill.called{background:rgba(var(--glow),.15);color:var(--accent2)}
 
-    /* ── Display board ── */
-    .display-root {
-      min-height:100dvh; display:flex; flex-direction:column;
-      align-items:center; justify-content:center; text-align:center; padding:24px;
-      position:relative;
-    }
-    .display-header {
-      position:absolute; top:24px; left:0; right:0; text-align:center;
-      font-size:11px; letter-spacing:4px; color:var(--muted);
-    }
-    .display-label { font-size:14px; letter-spacing:5px; text-transform:uppercase; color:var(--muted); }
-    .display-num {
-      font-size:clamp(100px,28vw,200px); font-weight:900; line-height:.95;
-      background:linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-      animation:glowPulse 2s ease infinite;
-    }
-    .display-num.empty { background:none; -webkit-text-fill-color:var(--muted); animation:none; }
-    .display-caption { font-size:18px; color:var(--muted); margin-top:20px; }
-    .display-wait-label { font-size:13px; letter-spacing:3px; color:var(--muted); margin-top:48px; }
-    .display-wait-num { font-size:72px; font-weight:900; color:var(--accent3); line-height:1; }
-    .display-wait-unit { font-size:16px; color:var(--muted); }
+    /* Form fields */
+    .field{margin-bottom:14px}
+    .field:last-child{margin-bottom:0}
+    .field-label{font-size:12px;color:var(--muted);margin-bottom:6px;display:block;letter-spacing:.5px}
+    .field-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-size:15px;font-family:inherit;outline:none;-webkit-appearance:none}
+    .field-input:focus{border-color:var(--accent)}
+    select.field-input option{background:#1a1a2e;color:var(--text)}
 
-    /* ── Open/close pill ── */
-    .open-pill {
-      display:inline-flex; align-items:center; gap:6px;
-      padding:5px 14px; border-radius:100px; font-size:12px; font-weight:700;
-    }
-    .open-pill.open   { background:rgba(85,239,196,.1); color:var(--accent3); }
-    .open-pill.closed { background:rgba(255,118,117,.1); color:var(--danger); }
+    /* Theme grid */
+    .theme-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .theme-swatch{cursor:pointer;text-align:center}
+    .theme-preview{height:48px;border-radius:10px;border:2px solid transparent;display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:4px;transition:border-color .15s}
+    .theme-swatch.selected .theme-preview{border-width:3px!important}
+    .theme-dot{width:8px;height:8px;border-radius:50%}
+    .theme-name{font-size:10px;color:var(--muted)}
 
-    /* ── Section title ── */
-    .sec { font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
+    /* Stamp */
+    .stamp-header{margin-bottom:10px}
+    .stamp-title{font-size:14px;font-weight:700}
+    .stamp-sub{font-size:11px;color:var(--muted);margin-top:3px}
+    .stamp-canvas{width:100%;border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;cursor:crosshair;touch-action:none;display:block;background:rgba(255,255,255,.02)}
 
-    /* ── Staff current number ── */
-    .staff-big {
-      text-align:center; padding:16px 0;
-    }
-    .staff-big-num {
-      font-size:72px; font-weight:900;
-      background:linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-    }
-    .staff-big-num.none { background:none; -webkit-text-fill-color:var(--muted); }
-    .staff-big-sub { font-size:13px; color:var(--muted); margin-top:4px; }
+    /* Display board */
+    .display-root{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;position:relative}
+    .display-top{position:absolute;top:24px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:4px;color:var(--muted)}
+    .display-slogan{font-size:13px;color:var(--muted);margin-top:-2px;margin-bottom:16px}
+    .display-label{font-size:13px;letter-spacing:5px;text-transform:uppercase;color:var(--muted)}
+    .display-range{font-size:clamp(56px,16vw,110px);font-weight:900;line-height:1;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:glowPulse 2s ease infinite}
+    .display-range.empty{background:none;-webkit-text-fill-color:var(--muted);animation:none}
+    .display-caption{font-size:16px;color:var(--muted);margin-top:16px}
+    .display-wait-label{font-size:12px;letter-spacing:3px;color:var(--muted);margin-top:44px}
+    .display-wait-num{font-size:64px;font-weight:900;color:var(--accent3);line-height:1}
+    .display-wait-unit{font-size:14px;color:var(--muted)}
 
-    /* ── Toast ── */
-    .toast {
-      position:fixed; bottom:26px; left:50%; z-index:9999;
-      transform:translateX(-50%) translateY(80px);
-      background:rgba(16,16,28,.96); border:1px solid rgba(124,108,240,.25);
-      color:var(--text); padding:12px 22px; border-radius:12px;
-      font-size:14px; font-weight:600; transition:transform .26s ease;
-      backdrop-filter:blur(20px); white-space:nowrap; pointer-events:none;
-    }
-    .toast.show { transform:translateX(-50%) translateY(0); }
+    /* Open pill */
+    .open-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:100px;font-size:12px;font-weight:700}
+    .open-pill.open{background:rgba(85,239,196,.1);color:var(--accent3)}
+    .open-pill.closed{background:rgba(255,118,117,.1);color:var(--danger)}
 
-    /* ── Loader ── */
-    .loader { display:flex; align-items:center; justify-content:center; padding:100px; }
-    .spin {
-      width:36px; height:36px; border-radius:50%;
-      border:3px solid rgba(124,108,240,.2); border-top-color:var(--accent);
-      animation:spin .7s linear infinite;
-    }
-    @keyframes spin { to{transform:rotate(360deg)} }
+    /* Section title */
+    .sec{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
 
-    .sp { height:10px; }
-    .link { color:var(--muted); font-size:12px; text-decoration:none; }
-    .link:hover { color:var(--accent); }
-    .center { text-align:center; }
+    /* BV logo tap area */
+    .bv-logo{font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.15);cursor:pointer;user-select:none;padding:8px}
+
+    /* Toast */
+    .toast{position:fixed;bottom:26px;left:50%;z-index:9999;transform:translateX(-50%) translateY(80px);background:rgba(16,16,28,.96);border:1px solid rgba(var(--glow),.25);color:var(--text);padding:12px 22px;border-radius:12px;font-size:14px;font-weight:600;transition:transform .26s ease;backdrop-filter:blur(20px);white-space:nowrap;pointer-events:none}
+    .toast.show{transform:translateX(-50%) translateY(0)}
+
+    /* Loader */
+    .loader{display:flex;align-items:center;justify-content:center;padding:120px}
+    .spin{width:36px;height:36px;border-radius:50%;border:3px solid rgba(var(--glow),.2);border-top-color:var(--accent);animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .sp{height:10px}
+    .link{color:var(--muted);font-size:12px;text-decoration:none}
+    .link:hover{color:var(--accent)}
+    .center{text-align:center}
+    .empty-msg{color:var(--muted);text-align:center;padding:20px;font-size:13px}
+    .hdr-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px}
   </style>
 </head>
 <body>
@@ -266,452 +165,574 @@
   <div class="toast" id="toast"></div>
 
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <script>
-  // ─── Config ────────────────────────────────────────────────────
-  const STAFF_PIN = '1234'; // スタッフ用PIN (変更可)
+  // ── Themes ────────────────────────────────────────
+  const THEMES = [
+    {name:'ナイト',    bg:'#08080f',a1:'#7c6cf0',a2:'#fd79a8',a3:'#55efc4',glow:'124,108,240'},
+    {name:'オーシャン',bg:'#030d1a',a1:'#00b4d8',a2:'#90e0ef',a3:'#48cae4',glow:'0,180,216'},
+    {name:'フォレスト',bg:'#071a07',a1:'#52b788',a2:'#95d5b2',a3:'#d8f3dc',glow:'82,183,136'},
+    {name:'サンセット',bg:'#1a0805',a1:'#e63946',a2:'#ff8166',a3:'#ffd166',glow:'230,57,70'},
+    {name:'ゴールド',  bg:'#100d00',a1:'#f9c74f',a2:'#f8961e',a3:'#f3722c',glow:'249,199,79'},
+    {name:'ミント',    bg:'#001a14',a1:'#43aa8b',a2:'#90be6d',a3:'#f9c74f',glow:'67,170,139'},
+    {name:'ラベンダー',bg:'#0d001a',a1:'#b5179e',a2:'#9d4edd',a3:'#f72585',glow:'181,23,158'},
+    {name:'モノクロ',  bg:'#080808',a1:'#e8e8e8',a2:'#bbbbbb',a3:'#888888',glow:'200,200,200'},
+  ];
+  const LOCATIONS = ['正門前','中庭','体育館前','A棟前','B棟前','ステージ横','その他'];
 
+  function applyTheme(id) {
+    const t = THEMES[id] || THEMES[0];
+    const r = document.documentElement;
+    r.style.setProperty('--bg', t.bg);
+    r.style.setProperty('--accent', t.a1);
+    r.style.setProperty('--accent2', t.a2);
+    r.style.setProperty('--accent3', t.a3);
+    r.style.setProperty('--glow', t.glow);
+    r.style.setProperty('--surface', `rgba(${t.glow},.04)`);
+    r.style.setProperty('--surface2', `rgba(${t.glow},.08)`);
+    r.style.setProperty('--border', `rgba(${t.glow},.12)`);
+    document.body.style.background = t.bg;
+  }
+
+  // ── Firebase ──────────────────────────────────────
   firebase.initializeApp({
-    apiKey: "AIzaSyCo8HLv4X8PxJmQGjhNtwePqEFLALs2vBA",
-    authDomain: "ticekets-f3625.firebaseapp.com",
-    projectId: "ticekets-f3625",
-    storageBucket: "ticekets-f3625.firebasestorage.app",
-    messagingSenderId: "463034107039",
-    appId: "1:463034107039:web:9528b908a43083f518ceaa"
+    apiKey:"AIzaSyCo8HLv4X8PxJmQGjhNtwePqEFLALs2vBA",
+    authDomain:"ticekets-f3625.firebaseapp.com",
+    projectId:"ticekets-f3625",
+    storageBucket:"ticekets-f3625.firebasestorage.app",
+    messagingSenderId:"463034107039",
+    appId:"1:463034107039:web:9528b908a43083f518ceaa"
   });
+  const auth = firebase.auth();
   const db = firebase.firestore();
+  db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 
-  // ─── Mode ──────────────────────────────────────────────────────
-  // ?mode=staff  → スタッフ管理画面
-  // ?mode=display → 大型表示ボード
-  // (default)    → お客様画面
-  const MODE = new URLSearchParams(location.search).get('mode') || 'customer';
-
-  // ─── Session ID (per-browser) ──────────────────────────────────
+  // ── State ─────────────────────────────────────────
+  const INITIAL_MODE = new URLSearchParams(location.search).get('mode') || 'customer';
   let sid = localStorage.getItem('bv_sid');
-  if (!sid) { sid = Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem('bv_sid',sid); }
+  if (!sid) { sid=Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem('bv_sid',sid); }
 
-  // ─── State ─────────────────────────────────────────────────────
-  let cfg       = null;   // Firestore config/queue document
-  let myTicket  = null;   // my ticket { id, number, status }
-  let tickets   = [];     // active tickets (waiting|called)
-  let pinBuf    = '';
-  let staffOk   = false;
+  let cfg=null, myTicket=null, tickets=[], staffUser=null;
+  let view = INITIAL_MODE === 'display' ? 'display' : INITIAL_MODE === 'staff' ? 'staff' : 'customer';
+  let tapCount=0, tapTimer;
+  let canvasDrawn=false;
 
-  // ─── Toast ─────────────────────────────────────────────────────
+  // ── Utils ─────────────────────────────────────────
   let toastT;
   function toast(msg) {
-    const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.classList.add('show');
-    clearTimeout(toastT);
-    toastT = setTimeout(() => el.classList.remove('show'), 2800);
+    const el=document.getElementById('toast');
+    el.textContent=msg; el.classList.add('show');
+    clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),2800);
   }
-
-  // ─── Sound ─────────────────────────────────────────────────────
   function playChime() {
     try {
-      const ctx = new AudioContext();
-      [[523.25,0],[659.25,.18],[783.99,.36],[1046.5,.54]].forEach(([f,t]) => {
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.connect(g); g.connect(ctx.destination);
-        o.type = 'sine'; o.frequency.value = f;
-        g.gain.setValueAtTime(.25, ctx.currentTime+t);
-        g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+t+.7);
-        o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.75);
+      const ctx=new AudioContext();
+      [[523.25,0],[659.25,.18],[783.99,.36],[1046.5,.54]].forEach(([f,t])=>{
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);o.type='sine';o.frequency.value=f;
+        g.gain.setValueAtTime(.2,ctx.currentTime+t);
+        g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+t+.7);
+        o.start(ctx.currentTime+t);o.stop(ctx.currentTime+t+.75);
       });
-    } catch(e) {}
+    } catch(e){}
   }
+  function pad(n){return String(n).padStart(2,'0')}
 
-  // ─── Firestore helpers ─────────────────────────────────────────
-  const cfgRef = db.collection('config').doc('queue');
+  // ── Firestore ─────────────────────────────────────
+  const cfgRef=db.collection('config').doc('queue');
 
   async function ensureConfig() {
-    const snap = await cfgRef.get();
-    if (!snap.exists) {
-      await cfgRef.set({ isOpen:true, nextNumber:1, calledNumber:null, calledTicketId:null });
-    }
+    try {
+      const s=await cfgRef.get();
+      if (!s.exists) {
+        await cfgRef.set({isOpen:true,nextNumber:1,maxCallCount:30,
+          storeName:'Bon Voyage',slogan:'旅へ出よう',location:'中庭',theme:0});
+      } else { applyTheme(s.data().theme||0); }
+    } catch(e){}
   }
 
-  // ─── Listeners ────────────────────────────────────────────────
   function startListeners() {
     ensureConfig();
-
-    // Config
-    cfgRef.onSnapshot(snap => {
-      if (!snap.exists) return;
-      cfg = snap.data();
+    cfgRef.onSnapshot(s=>{
+      if(!s.exists)return;
+      cfg=s.data();
+      applyTheme(cfg.theme||0);
+      if(cfg.storeName) document.title=`整理券 | ${cfg.storeName}`;
       render();
     });
-
-    // Active tickets
-    db.collection('tickets')
-      .where('status','in',['waiting','called'])
-      .orderBy('number','asc')
-      .onSnapshot(snap => {
-        tickets = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-        render();
-      });
-
-    // Own ticket
-    const savedId = localStorage.getItem('bv_ticket_id');
-    if (savedId && MODE === 'customer') listenMyTicket(savedId);
+    db.collection('tickets').where('status','in',['waiting','called']).orderBy('number','asc').onSnapshot(s=>{
+      tickets=s.docs.map(d=>({id:d.id,...d.data()}));
+      render();
+    });
+    const saved=localStorage.getItem('bv_ticket_id');
+    if(saved && INITIAL_MODE==='customer') listenMyTicket(saved);
   }
 
   function listenMyTicket(id) {
-    db.collection('tickets').doc(id).onSnapshot(snap => {
-      if (!snap.exists) { clearMyTicket(); return; }
-      const data = snap.data();
-      if (data.status === 'cancelled' || data.status === 'done' && !myTicket) {
-        clearMyTicket(); return;
-      }
-      const prevStatus = myTicket?.status;
-      myTicket = { id:snap.id, ...data };
-      if (prevStatus === 'waiting' && myTicket.status === 'called') {
+    db.collection('tickets').doc(id).onSnapshot(s=>{
+      if(!s.exists){clearMyTicket();return;}
+      const data=s.data();
+      if(data.status==='cancelled'){clearMyTicket();return;}
+      const prev=myTicket?.status;
+      myTicket={id:s.id,...data};
+      if(prev==='waiting'&&myTicket.status==='called'){
         playChime();
-        if (navigator.vibrate) navigator.vibrate([200,80,200,80,300]);
+        if(navigator.vibrate)navigator.vibrate([200,80,200,80,300]);
         toast('🔔 あなたの番号が呼ばれました！');
       }
       render();
     });
   }
+  function clearMyTicket(){myTicket=null;localStorage.removeItem('bv_ticket_id');render();}
 
-  function clearMyTicket() {
-    myTicket = null;
-    localStorage.removeItem('bv_ticket_id');
-    render();
-  }
-
-  // ─── Customer actions ──────────────────────────────────────────
+  // ── Customer actions ──────────────────────────────
   async function getTicket() {
-    if (!cfg?.isOpen) { toast('現在受付を停止しています'); return; }
-    if (localStorage.getItem('bv_ticket_id')) { toast('すでに整理券をお持ちです'); return; }
-    const btn = document.getElementById('btn-get');
-    if (btn) btn.disabled = true;
+    if(!cfg?.isOpen){toast('現在受付を停止しています');return;}
+    if(localStorage.getItem('bv_ticket_id')){toast('すでに整理券をお持ちです');return;}
+    const btn=document.getElementById('btn-get');
+    if(btn)btn.disabled=true;
     try {
-      const num = cfg.nextNumber;
-      const ref = await db.collection('tickets').add({
-        number:num, status:'waiting', sid,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp(), calledAt:null
+      const num=cfg.nextNumber;
+      const maxCall=cfg.maxCallCount||30;
+      const status=num<=maxCall?'called':'waiting';
+      const ref=await db.collection('tickets').add({
+        number:num,status,sid,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        calledAt:status==='called'?firebase.firestore.FieldValue.serverTimestamp():null
       });
-      await cfgRef.update({ nextNumber:firebase.firestore.FieldValue.increment(1) });
-      localStorage.setItem('bv_ticket_id', ref.id);
-      myTicket = { id:ref.id, number:num, status:'waiting' };
+      await cfgRef.update({nextNumber:firebase.firestore.FieldValue.increment(1)});
+      localStorage.setItem('bv_ticket_id',ref.id);
+      myTicket={id:ref.id,number:num,status};
       listenMyTicket(ref.id);
+      if(status==='called'){playChime();if(navigator.vibrate)navigator.vibrate([200,80,200]);}
       toast(`整理券 No.${pad(num)} を取得しました`);
-    } catch(e) {
+    } catch(e){
       toast('エラーが発生しました。再試行してください');
-      if (btn) btn.disabled = false;
+      if(btn)btn.disabled=false;
     }
   }
 
   async function cancelTicket() {
-    if (!myTicket) return;
-    if (!confirm('整理券をキャンセルしますか？')) return;
-    await db.collection('tickets').doc(myTicket.id).update({ status:'cancelled' });
-    clearMyTicket();
-    toast('整理券をキャンセルしました');
+    if(!myTicket||myTicket.status==='called')return;
+    if(!confirm('整理券をキャンセルしますか？'))return;
+    await db.collection('tickets').doc(myTicket.id).update({status:'cancelled'});
+    clearMyTicket();toast('整理券をキャンセルしました');
   }
 
-  // ─── Staff actions ─────────────────────────────────────────────
-  async function callNext() {
-    const waiting = tickets.filter(t => t.status === 'waiting');
-    if (tickets.some(t => t.status === 'called')) { toast('現在対応中です。完了後に次を呼んでください'); return; }
-    if (waiting.length === 0) { toast('待機中のお客様はいません'); return; }
-    const next = waiting[0];
-    try {
-      await db.collection('tickets').doc(next.id).update({
-        status:'called', calledAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
-      await cfgRef.update({ calledNumber:next.number, calledTicketId:next.id });
-      toast(`No.${pad(next.number)} を呼び出しました`);
-    } catch(e) { toast('エラーが発生しました'); }
+  async function submitStamp() {
+    const canvas=document.getElementById('stamp-canvas');
+    if(!canvas||!myTicket||!canvasDrawn){toast('サインを記入してください');return;}
+    if(!confirm('承認しますか？'))return;
+    const sig=canvas.toDataURL('image/jpeg',.35);
+    await db.collection('tickets').doc(myTicket.id).update({
+      status:'done',signature:sig,
+      doneAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    toast('承認しました');
   }
 
-  async function markDone() {
-    const calling = tickets.find(t => t.status === 'called');
-    if (!calling) { toast('呼び出し中のお客様がいません'); return; }
-    try {
-      await db.collection('tickets').doc(calling.id).update({
-        status:'done', doneAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
-      await cfgRef.update({ calledNumber:null, calledTicketId:null });
-      toast(`No.${pad(calling.number)} — 対応完了`);
-    } catch(e) { toast('エラーが発生しました'); }
+  // ── Staff actions ─────────────────────────────────
+  async function updateCallCount(delta) {
+    if(!cfg)return;
+    const old=cfg.maxCallCount||30;
+    const next=Math.max(1,old+delta);
+    if(next>old) {
+      const toCall=tickets.filter(t=>t.status==='waiting'&&t.number>old&&t.number<=next);
+      if(toCall.length>0){
+        const batch=db.batch();
+        toCall.forEach(t=>batch.update(db.collection('tickets').doc(t.id),{
+          status:'called',calledAt:firebase.firestore.FieldValue.serverTimestamp()
+        }));
+        await batch.commit();
+        toast(`${toCall.length}人を新たに呼び出しました`);
+      }
+    }
+    await cfgRef.update({maxCallCount:next});
   }
 
-  async function toggleOpen() {
-    if (!cfg) return;
-    await cfgRef.update({ isOpen:!cfg.isOpen });
-    toast(cfg.isOpen ? '受付を停止しました' : '受付を再開しました');
+  async function toggleOpen(){
+    if(!cfg)return;
+    await cfgRef.update({isOpen:!cfg.isOpen});
+    toast(cfg.isOpen?'受付を停止しました':'受付を再開しました');
   }
 
-  async function resetAll() {
-    if (!confirm('全ての整理券データをリセットしますか？\nこの操作は取り消せません。')) return;
-    const snap = await db.collection('tickets').get();
-    const batch = db.batch();
-    snap.docs.forEach(d => batch.delete(d.ref));
+  async function resetAll(){
+    if(!confirm('全データをリセットしますか？\nこの操作は取り消せません。'))return;
+    const s=await db.collection('tickets').get();
+    const batch=db.batch();
+    s.docs.forEach(d=>batch.delete(d.ref));
     await batch.commit();
-    await cfgRef.set({ isOpen:true, nextNumber:1, calledNumber:null, calledTicketId:null });
+    await cfgRef.update({nextNumber:1,maxCallCount:30});
     toast('リセットしました');
   }
 
-  // ─── PIN ──────────────────────────────────────────────────────
-  function pinKey(v) {
-    if (v === 'del') pinBuf = pinBuf.slice(0,-1);
-    else if (pinBuf.length < 4) pinBuf += v;
-    if (pinBuf.length === 4) {
-      if (pinBuf === STAFF_PIN) { staffOk = true; toast('ログイン成功'); }
-      else { toast('PINが違います'); pinBuf = ''; }
-    }
-    render();
+  async function saveSettings(f){
+    const themeVal=parseInt(document.querySelector('input[name="theme"]:checked')?.value||0);
+    await cfgRef.update({
+      storeName:f.storeName.value||'Bon Voyage',
+      slogan:f.slogan.value||'',
+      location:f.location.value||'中庭',
+      maxCallCount:parseInt(f.maxCallCount.value)||30,
+      theme:themeVal
+    });
+    toast('設定を保存しました');
+    view='staff';render();
   }
 
-  // ─── Helpers ──────────────────────────────────────────────────
-  function pad(n) { return String(n).padStart(2,'0'); }
+  // ── Auth ──────────────────────────────────────────
+  auth.onAuthStateChanged(u=>{
+    staffUser=u;
+    if(view==='staff'||view==='settings')render();
+  });
 
-  // ─── Render ───────────────────────────────────────────────────
-  function render() {
-    if (!cfg) return;
-    const root = document.getElementById('root');
-    if (MODE === 'display') { root.innerHTML = renderDisplay(); return; }
-    if (MODE === 'staff')   { root.innerHTML = staffOk ? renderStaff() : renderPin(); }
-    else                    { root.innerHTML = renderCustomer(); }
-    bindEvents();
+  async function signIn(email,pass){
+    try{
+      await auth.signInWithEmailAndPassword(email,pass);
+      toast('ログインしました');view='staff';render();
+    }catch(e){toast('ログインに失敗しました');}
+  }
+  async function signOut(){
+    await auth.signOut();view='customer';render();toast('ログアウトしました');
   }
 
-  // ── Customer ──
-  function renderCustomer() {
-    const calling = tickets.find(t => t.status === 'called');
-    const waitList = tickets.filter(t => t.status === 'waiting');
+  function handleTap(){
+    tapCount++;clearTimeout(tapTimer);
+    tapTimer=setTimeout(()=>{tapCount=0;},1500);
+    if(tapCount>=5){tapCount=0;view='staff';render();}
+  }
 
-    if (!myTicket) {
-      return `
-        <div class="page">
-          <div class="header">
-            <div class="badge">BON VOYAGE</div>
-            <h1>整理券システム</h1>
-            <p>文化祭 会計受付</p>
-          </div>
-          <div class="card">
-            <div class="ticket-box">
-              <div class="ticket-label">NEXT NUMBER</div>
-              <div class="ticket-num ${!cfg.isOpen?'dim':''}">
-                ${cfg.isOpen ? `No.${pad(cfg.nextNumber)}` : '--'}
-              </div>
-              <div style="color:var(--muted);font-size:12px;margin-top:6px">
-                ${cfg.isOpen ? '次の発行番号' : '現在受付停止中'}
-              </div>
-            </div>
-          </div>
-          ${!cfg.isOpen ? `
-            <div class="card warn" style="text-align:center;padding:16px">
-              <div style="font-size:14px;font-weight:700;color:var(--warning)">現在受付を停止しています</div>
-              <div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div>
-            </div>
-          ` : ''}
-          <button class="btn btn-primary" id="btn-get" ${!cfg.isOpen?'disabled':''}>
-            整理券を取る
-          </button>
-          ${calling ? `
-            <div class="card" style="margin-top:14px">
-              <div class="row"><span class="row-label">現在対応中</span><span class="row-value">No.${pad(calling.number)}</span></div>
-              <div class="row"><span class="row-label">待機人数</span><span class="row-value">${waitList.length}人</span></div>
-            </div>
-          ` : ''}
-          <div class="center" style="margin-top:20px">
-            <a class="link" href="?mode=display" target="_blank">📺 表示ボードを開く</a>
-          </div>
-        </div>`;
+  // ── Canvas ────────────────────────────────────────
+  function initCanvas(){
+    const canvas=document.getElementById('stamp-canvas');
+    if(!canvas)return;
+    canvasDrawn=false;
+    const r=canvas.getBoundingClientRect();
+    canvas.width=r.width||280; canvas.height=130;
+    const ctx=canvas.getContext('2d');
+    drawPlaceholder(ctx,canvas.width,canvas.height);
+    let drawing=false,firstDraw=true;
+
+    function getPos(e){
+      const rc=canvas.getBoundingClientRect();
+      const src=e.touches?e.touches[0]:e;
+      return{x:(src.clientX-rc.left)*(canvas.width/rc.width),y:(src.clientY-rc.top)*(canvas.height/rc.height)};
     }
-
-    if (myTicket.status === 'done') {
-      return `
-        <div class="page">
-          <div class="header">
-            <div class="badge">BON VOYAGE</div>
-            <h1>整理券システム</h1>
-          </div>
-          <div class="card success" style="text-align:center;padding:32px 20px">
-            <div style="font-size:48px">🎉</div>
-            <div style="font-size:18px;font-weight:800;margin-top:12px;color:var(--accent3)">対応が完了しました</div>
-            <div style="color:var(--muted);font-size:13px;margin-top:6px">ご利用ありがとうございました</div>
-            <div style="margin-top:24px;font-size:11px;letter-spacing:2px;color:var(--muted)">YOUR NUMBER</div>
-            <div style="font-size:52px;font-weight:900;color:var(--accent3);line-height:1">No.${pad(myTicket.number)}</div>
-          </div>
-          <button class="btn btn-ghost" id="btn-new">新しい整理券を取る</button>
-        </div>`;
+    function start(e){
+      e.preventDefault();
+      if(firstDraw){ctx.clearRect(0,0,canvas.width,canvas.height);firstDraw=false;}
+      drawing=true;canvasDrawn=true;
+      const p=getPos(e);
+      ctx.beginPath();ctx.moveTo(p.x,p.y);
+      ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#7c6cf0';
+      ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';
+      updateStampBtn();
     }
+    function move(e){
+      e.preventDefault();if(!drawing)return;
+      const p=getPos(e);ctx.lineTo(p.x,p.y);ctx.stroke();
+    }
+    function end(){drawing=false;}
+    canvas.addEventListener('mousedown',start);
+    canvas.addEventListener('mousemove',move);
+    canvas.addEventListener('mouseup',end);
+    canvas.addEventListener('touchstart',start,{passive:false});
+    canvas.addEventListener('touchmove',move,{passive:false});
+    canvas.addEventListener('touchend',end);
 
-    const isCalled = myTicket.status === 'called';
-    const ahead = waitList.filter(t => t.number < myTicket.number).length;
+    document.getElementById('btn-clear-stamp')?.addEventListener('click',()=>{
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      drawPlaceholder(ctx,canvas.width,canvas.height);
+      canvasDrawn=false;firstDraw=true;updateStampBtn();
+    });
+  }
 
-    return `
-      ${isCalled ? '<div class="called-overlay"></div>' : ''}
-      <div class="page">
+  function drawPlaceholder(ctx,w,h){
+    ctx.fillStyle='rgba(255,255,255,.03)';ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='rgba(255,255,255,.18)';ctx.font='12px sans-serif';ctx.textAlign='center';
+    ctx.fillText('スタッフがここにサインしてください',w/2,h/2-7);
+    ctx.fillText('（タッチペンまたは指で記入）',w/2,h/2+11);
+  }
+
+  function updateStampBtn(){
+    const btn=document.getElementById('btn-stamp');
+    if(btn)btn.disabled=!canvasDrawn;
+  }
+
+  // ── Render ────────────────────────────────────────
+  function render(){
+    if(!cfg)return;
+    const root=document.getElementById('root');
+    if(view==='display')     {root.innerHTML=renderDisplay();return;}
+    if(view==='staff')       {root.innerHTML=staffUser?renderStaff():renderLogin();}
+    else if(view==='settings'){root.innerHTML=staffUser?renderSettings():renderLogin();}
+    else                     {root.innerHTML=renderCustomer();}
+    postRender();
+  }
+
+  function postRender(){
+    if(view==='customer')bindCustomer();
+    else if(view==='staff'&&staffUser)bindStaff();
+    else if(view==='settings'&&staffUser)bindSettings();
+    else if(!staffUser)bindLogin();
+    if(document.getElementById('stamp-canvas'))setTimeout(initCanvas,60);
+  }
+
+  // ── renderCustomer ────────────────────────────────
+  function renderCustomer(){
+    const sn=cfg.storeName||'整理券システム';
+    const waitList=tickets.filter(t=>t.status==='waiting');
+    const calledList=tickets.filter(t=>t.status==='called');
+    const maxCall=cfg.maxCallCount||30;
+    const logoTap=`onclick="handleTap()"`;
+
+    if(!myTicket){
+      return `<div class="page">
         <div class="header">
           <div class="badge">BON VOYAGE</div>
-          <h1>整理券システム</h1>
+          <h1>${sn}</h1>
+          ${cfg.slogan?`<p class="store-sub">${cfg.slogan}</p>`:''}
+          ${cfg.location?`<p class="store-loc">📍 ${cfg.location}</p>`:''}
         </div>
-        <div class="card ${isCalled?'highlight':''}">
+        ${!cfg.isOpen?`<div class="card warn" style="text-align:center"><div style="font-weight:700;color:var(--warning)">現在受付を停止しています</div><div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div></div>`:''}
+        <div class="card">
+          <div class="ticket-box">
+            <div class="ticket-label">NEXT NUMBER</div>
+            <div class="ticket-num ${!cfg.isOpen?'dim':''}">${cfg.isOpen?`No.${pad(cfg.nextNumber)}`:'--'}</div>
+            <div style="color:var(--muted);font-size:12px;margin-top:4px">${cfg.isOpen?'次の発行番号':''}</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btn-get" ${!cfg.isOpen?'disabled':''}>整理券を取る</button>
+        ${calledList.length>0?`<div class="card" style="margin-top:14px">
+          <div class="row"><span class="row-label">呼び出し中</span><span class="row-value" style="color:var(--accent2)">No.01 〜 No.${pad(maxCall)}</span></div>
+          <div class="row"><span class="row-label">待機人数</span><span class="row-value">${waitList.length}人</span></div>
+        </div>`:''}
+        <div class="center" style="margin-top:28px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
+        <div class="center" style="margin-top:8px"><a class="link" href="?mode=display" target="_blank">📺 表示ボードを開く</a></div>
+      </div>`;
+    }
+
+    if(myTicket.status==='done'){
+      return `<div class="page">
+        <div class="header"><div class="badge">BON VOYAGE</div><h1>${sn}</h1></div>
+        <div class="card success" style="text-align:center;padding:32px 20px">
+          <div style="font-size:44px">🎉</div>
+          <div style="font-size:18px;font-weight:800;margin-top:10px;color:var(--accent3)">ご利用ありがとうございました</div>
+          <div style="margin-top:20px;font-size:10px;letter-spacing:2px;color:var(--muted)">YOUR NUMBER</div>
+          <div style="font-size:52px;font-weight:900;color:var(--accent3);line-height:1">No.${pad(myTicket.number)}</div>
+          ${myTicket.signature?`<div style="margin-top:14px;font-size:11px;color:var(--muted)">✓ スタッフ承認済み</div>
+          <img src="${myTicket.signature}" style="max-width:180px;border:1px solid var(--border);border-radius:8px;margin-top:8px">`:``}
+        </div>
+        <button class="btn btn-ghost" id="btn-new" style="margin-top:12px">新しい整理券を取る</button>
+        <div class="center" style="margin-top:20px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
+      </div>`;
+    }
+
+    if(myTicket.status==='called'){
+      return `<div class="called-overlay"></div>
+      <div class="page">
+        <div class="header"><div class="badge">BON VOYAGE</div><h1>${sn}</h1></div>
+        <div class="card highlight">
           <div class="ticket-box">
             <div class="ticket-label">あなたの整理券</div>
-            <div class="ticket-num ${isCalled?'calling':''}">No.${pad(myTicket.number)}</div>
-            <div>
-              <span class="status ${myTicket.status}">
-                <span class="dot"></span>
-                ${myTicket.status==='waiting'?'順番待ち中':'🔔 呼び出し中！'}
-              </span>
-            </div>
+            <div class="ticket-num calling">No.${pad(myTicket.number)}</div>
+            <div><span class="status called"><span class="dot"></span>🔔 呼び出し中！</span></div>
           </div>
         </div>
-        ${isCalled ? `
-          <div class="card highlight" style="text-align:center;padding:20px">
-            <div style="font-size:22px;font-weight:900;color:#a29bfe">📢 お呼びしています！</div>
-            <div style="font-size:14px;color:var(--muted);margin-top:6px">会計カウンターまでお越しください</div>
+        <div class="card highlight" style="text-align:center;padding:16px">
+          <div style="font-size:18px;font-weight:900;color:var(--accent2)">📢 ${cfg.location||'カウンター'}まで<br>お越しください！</div>
+        </div>
+        <div class="card">
+          <div class="stamp-header">
+            <div class="stamp-title">🖊 スタッフ用スタンプ欄</div>
+            <div class="stamp-sub">スタッフがサインすると承認完了になります（使い回し防止）</div>
           </div>
-        ` : `
-          <div class="card">
-            ${calling?`<div class="row"><span class="row-label">現在対応中</span><span class="row-value">No.${pad(calling.number)}</span></div>`:''}
-            <div class="row"><span class="row-label">あなたの前</span><span class="row-value">${ahead}人</span></div>
-            <div class="row"><span class="row-label">合計待機</span><span class="row-value">${waitList.length}人</span></div>
+          <canvas id="stamp-canvas" class="stamp-canvas" height="130"></canvas>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-ghost" id="btn-clear-stamp" style="font-size:13px;padding:10px;flex:1">消去</button>
+            <button class="btn btn-success" id="btn-stamp" disabled style="flex:2">承認する ✓</button>
           </div>
-        `}
+        </div>
+        <div class="center" style="margin-top:16px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
+      </div>`;
+    }
+
+    // waiting
+    const ahead=waitList.filter(t=>t.number<myTicket.number).length;
+    return `<div class="page">
+      <div class="header"><div class="badge">BON VOYAGE</div><h1>${sn}</h1></div>
+      <div class="card">
+        <div class="ticket-box">
+          <div class="ticket-label">あなたの整理券</div>
+          <div class="ticket-num">No.${pad(myTicket.number)}</div>
+          <div><span class="status waiting"><span class="dot"></span>順番待ち中</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row"><span class="row-label">現在の呼び出し</span><span class="row-value">〜 No.${pad(maxCall)}</span></div>
+        <div class="row"><span class="row-label">あなたの前</span><span class="row-value">${ahead}人</span></div>
+        <div class="row"><span class="row-label">合計待機</span><span class="row-value">${waitList.length}人</span></div>
+      </div>
+      <div class="sp"></div>
+      <button class="btn btn-ghost" id="btn-cancel" style="font-size:13px;padding:12px;color:var(--muted)">整理券をキャンセル</button>
+      <div class="center" style="margin-top:20px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
+    </div>`;
+  }
+
+  // ── renderStaff ───────────────────────────────────
+  function renderStaff(){
+    const maxCall=cfg.maxCallCount||30;
+    const calling=tickets.filter(t=>t.status==='called');
+    const waiting=tickets.filter(t=>t.status==='waiting');
+    return `<div class="page">
+      <div class="header">
+        <div class="badge">STAFF PANEL</div>
+        <h1>${cfg.storeName||'スタッフ管理'}</h1>
+        <div class="hdr-row">
+          <span class="open-pill ${cfg.isOpen?'open':'closed'}">● ${cfg.isOpen?'受付中':'受付停止'}</span>
+          <button class="btn-icon" onclick="view='settings';render()">⚙</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="sec">呼び出し人数</div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn" id="btn-minus" ${maxCall<=1?'disabled':''}>−</button>
+          <div style="text-align:center">
+            <div class="ctrl-num">${maxCall}</div>
+            <div class="ctrl-unit">人まで呼び出し中</div>
+          </div>
+          <button class="ctrl-btn" id="btn-plus">＋</button>
+        </div>
+        <div style="font-size:12px;color:var(--muted);text-align:center;margin-top:4px">No.01 〜 No.${pad(maxCall)} が対象</div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-num" style="color:var(--accent2)">${calling.length}</div><div class="stat-label">呼出中</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:var(--warning)">${waiting.length}</div><div class="stat-label">待機中</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:var(--accent3)">${(cfg.nextNumber||1)-1}</div><div class="stat-label">発行済</div></div>
+      </div>
+      <div class="card">
+        <div class="sec">待機リスト (${waiting.length}人)</div>
+        <div class="queue-scroll">
+          ${tickets.length===0?'<div class="empty-msg">待機中のお客様はいません</div>':
+            tickets.map(t=>`<div class="q-item ${t.status==='called'?'active':''}">
+              <span class="q-num">No.${pad(t.number)}</span>
+              <span class="q-pill ${t.status}">${t.status==='called'?'呼出中':'待機中'}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="sec">操作</div>
+        <button class="btn btn-ghost" id="btn-toggle" style="margin-bottom:10px">${cfg.isOpen?'受付を停止する':'受付を再開する'}</button>
+        <button class="btn" id="btn-reset" style="background:rgba(255,118,117,.08);color:var(--danger);border:1px solid rgba(255,118,117,.2)">全データをリセット</button>
+      </div>
+      <div class="center" style="margin-top:10px"><a class="link" href="?mode=display" target="_blank">📺 表示ボードを別タブで開く</a></div>
+      <div class="center" style="margin-top:10px"><button onclick="signOut()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px">ログアウト</button></div>
+    </div>`;
+  }
+
+  // ── renderSettings ────────────────────────────────
+  function renderSettings(){
+    return `<div class="page">
+      <div class="header"><div class="badge">SETTINGS</div><h1>設定</h1></div>
+      <form id="settings-form">
+        <div class="card">
+          <div class="sec">店舗情報</div>
+          <div class="field"><label class="field-label">店名</label><input class="field-input" name="storeName" value="${cfg.storeName||''}" placeholder="例: Bon Voyage"></div>
+          <div class="field"><label class="field-label">スローガン</label><input class="field-input" name="slogan" value="${cfg.slogan||''}" placeholder="例: 旅へ出よう"></div>
+          <div class="field"><label class="field-label">売り場の場所</label>
+            <select class="field-input" name="location">
+              ${LOCATIONS.map(l=>`<option value="${l}" ${cfg.location===l?'selected':''}>${l}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field"><label class="field-label">呼び出し人数（初期値）</label><input class="field-input" name="maxCallCount" type="number" min="1" max="999" value="${cfg.maxCallCount||30}"></div>
+        </div>
+        <div class="card">
+          <div class="sec">テーマ（背景・カラー）</div>
+          <div class="theme-grid">
+            ${THEMES.map((t,i)=>`<label class="theme-swatch ${(cfg.theme||0)===i?'selected':''}">
+              <input type="radio" name="theme" value="${i}" ${(cfg.theme||0)===i?'checked':''} style="display:none">
+              <div class="theme-preview" style="background:${t.bg};border-color:${t.a1}">
+                <div class="theme-dot" style="background:${t.a1}"></div>
+                <div class="theme-dot" style="background:${t.a2}"></div>
+                <div class="theme-dot" style="background:${t.a3}"></div>
+              </div>
+              <div class="theme-name">${t.name}</div>
+            </label>`).join('')}
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">保存する</button>
+      </form>
+      <div class="center" style="margin-top:12px">
+        <button onclick="view='staff';render()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px">← 管理画面に戻る</button>
+      </div>
+    </div>`;
+  }
+
+  // ── renderLogin ───────────────────────────────────
+  function renderLogin(){
+    return `<div class="page">
+      <div class="header"><div class="badge">STAFF</div><h1>スタッフログイン</h1><p class="store-sub">Firebaseアカウントでログイン</p></div>
+      <div class="card">
+        <div class="field"><label class="field-label">メールアドレス</label><input class="field-input" id="login-email" type="email" placeholder="staff@example.com" autocomplete="email"></div>
+        <div class="field"><label class="field-label">パスワード</label><input class="field-input" id="login-pass" type="password" placeholder="パスワード" autocomplete="current-password"></div>
         <div class="sp"></div>
-        <button class="btn btn-ghost" id="btn-cancel" style="font-size:13px;padding:12px;color:var(--muted)">
-          整理券をキャンセル
-        </button>
-      </div>`;
+        <button class="btn btn-primary" id="btn-login">ログイン</button>
+      </div>
+      <div class="center" style="margin-top:14px">
+        <button onclick="view='customer';render()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px">← 一般画面に戻る</button>
+      </div>
+    </div>`;
   }
 
-  // ── Staff ──
-  function renderStaff() {
-    const calling = tickets.find(t => t.status === 'called');
-    const waitList = tickets.filter(t => t.status === 'waiting');
-    const hasCalling = !!calling;
-    const hasWaiting = waitList.length > 0;
-
-    return `
-      <div class="page">
-        <div class="header">
-          <div class="badge">STAFF PANEL</div>
-          <h1>スタッフ管理</h1>
-          <div style="margin-top:10px">
-            <span class="open-pill ${cfg.isOpen?'open':'closed'}">
-              ● ${cfg.isOpen?'受付中':'受付停止'}
-            </span>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="sec">現在の呼び出し</div>
-          <div class="staff-big">
-            <div class="staff-big-num ${!calling?'none':''}">
-              ${calling?`No.${pad(calling.number)}`:'---'}
-            </div>
-            <div class="staff-big-sub">${calling?'対応中':'待機中'}</div>
-          </div>
-          <button class="btn btn-primary" id="btn-next"
-            ${hasCalling||!hasWaiting?'disabled':''}>
-            次を呼ぶ${hasWaiting?` (残り${waitList.length}人)`:' (待機なし)'}
-          </button>
-          ${hasCalling?'<div class="sp"></div>':''}
-          <button class="btn btn-success" id="btn-done" ${!hasCalling?'disabled':''}>
-            対応完了 ✓
-          </button>
-        </div>
-
-        <div class="card">
-          <div class="sec">待機リスト (${waitList.length}人)</div>
-          <div class="queue-scroll">
-            ${tickets.length===0
-              ? '<div style="color:var(--muted);text-align:center;padding:20px;font-size:13px">待機中のお客様はいません</div>'
-              : tickets.map(t=>`
-                  <div class="q-item ${t.status==='called'?'active':''}">
-                    <span class="q-num">No.${pad(t.number)}</span>
-                    <span class="q-pill ${t.status}">${t.status==='called'?'呼出中':'待機中'}</span>
-                  </div>`).join('')
-            }
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="sec">設定</div>
-          <button class="btn btn-ghost" id="btn-toggle" style="margin-bottom:10px">
-            ${cfg.isOpen?'受付を停止する':'受付を再開する'}
-          </button>
-          <button class="btn" id="btn-reset"
-            style="background:rgba(255,118,117,.08);color:var(--danger);border:1px solid rgba(255,118,117,.2)">
-            全データをリセット
-          </button>
-        </div>
-
-        <div class="center" style="margin-top:14px">
-          <a class="link" href="?mode=display" target="_blank">📺 表示ボードを別タブで開く</a>
-        </div>
-      </div>`;
+  // ── renderDisplay ─────────────────────────────────
+  function renderDisplay(){
+    const maxCall=cfg?.maxCallCount||30;
+    const waitCount=tickets.filter(t=>t.status==='waiting').length;
+    return `<div class="display-root">
+      <div class="display-top">${cfg?.storeName||'BON VOYAGE'} — ${cfg?.location||'文化祭'}</div>
+      ${cfg?.slogan?`<div class="display-slogan" style="margin-top:60px">${cfg.slogan}</div>`:'<div style="height:60px"></div>'}
+      <div class="display-label">現在 呼び出し中</div>
+      <div class="display-range ${!cfg?.isOpen?'empty':''}">No.01 〜 No.${pad(maxCall)}</div>
+      <div class="display-caption">${cfg?.isOpen?'該当番号の方はカウンターへ':'現在受付停止中'}</div>
+      <div class="display-wait-label">WAITING</div>
+      <div class="display-wait-num">${waitCount}</div>
+      <div class="display-wait-unit">人待機中</div>
+    </div>`;
   }
 
-  // ── PIN ──
-  function renderPin() {
-    return `
-      <div class="page">
-        <div class="header">
-          <div class="badge">STAFF</div>
-          <h1>スタッフログイン</h1>
-          <p>PINコードを入力してください</p>
-        </div>
-        <div class="card">
-          <div class="pin-dots">
-            ${[0,1,2,3].map(i=>`<div class="pin-dot ${i<pinBuf.length?'on':''}"></div>`).join('')}
-          </div>
-          <div class="pin-grid">
-            ${[1,2,3,4,5,6,7,8,9].map(n=>`
-              <button class="pin-key" onclick="pinKey('${n}')">${n}</button>
-            `).join('')}
-            <div></div>
-            <button class="pin-key" onclick="pinKey('0')">0</button>
-            <button class="pin-key del" onclick="pinKey('del')">⌫</button>
-          </div>
-        </div>
-        <div class="center" style="margin-top:16px">
-          <a class="link" href="/">← 一般画面に戻る</a>
-        </div>
-      </div>`;
+  // ── Event binding ─────────────────────────────────
+  function bindCustomer(){
+    document.getElementById('btn-get')?.addEventListener('click',getTicket);
+    document.getElementById('btn-cancel')?.addEventListener('click',cancelTicket);
+    document.getElementById('btn-new')?.addEventListener('click',()=>{clearMyTicket();});
+    document.getElementById('btn-stamp')?.addEventListener('click',submitStamp);
+  }
+  function bindStaff(){
+    document.getElementById('btn-minus')?.addEventListener('click',()=>updateCallCount(-1));
+    document.getElementById('btn-plus')?.addEventListener('click',()=>updateCallCount(1));
+    document.getElementById('btn-toggle')?.addEventListener('click',toggleOpen);
+    document.getElementById('btn-reset')?.addEventListener('click',resetAll);
+  }
+  function bindSettings(){
+    document.getElementById('settings-form')?.addEventListener('submit',e=>{e.preventDefault();saveSettings(e.target);});
+    document.querySelectorAll('input[name="theme"]').forEach(inp=>{
+      inp.addEventListener('change',()=>{
+        applyTheme(parseInt(inp.value));
+        document.querySelectorAll('.theme-swatch').forEach(s=>s.classList.remove('selected'));
+        inp.closest('.theme-swatch')?.classList.add('selected');
+      });
+    });
+  }
+  function bindLogin(){
+    document.getElementById('btn-login')?.addEventListener('click',()=>{
+      const e=document.getElementById('login-email')?.value;
+      const p=document.getElementById('login-pass')?.value;
+      if(e&&p)signIn(e,p); else toast('メールアドレスとパスワードを入力してください');
+    });
+    document.getElementById('login-pass')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('btn-login')?.click();});
   }
 
-  // ── Display ──
-  function renderDisplay() {
-    const num = cfg?.calledNumber;
-    const waitCount = tickets.filter(t=>t.status==='waiting').length;
-    return `
-      <div class="display-root">
-        <div class="display-header">BON VOYAGE — 文化祭 会計受付</div>
-        <div class="display-label">現在対応中</div>
-        <div class="display-num ${!num?'empty':''}">
-          ${num?`No.${pad(num)}`:'---'}
-        </div>
-        <div class="display-caption">
-          ${num?'カウンターまでお越しください':cfg?.isOpen?'順番をお待ちください':'現在受付停止中'}
-        </div>
-        <div class="display-wait-label">WAITING</div>
-        <div class="display-wait-num">${waitCount}</div>
-        <div class="display-wait-unit">人待機中</div>
-      </div>`;
-  }
-
-  // ─── Event binding ────────────────────────────────────────────
-  function bindEvents() {
-    document.getElementById('btn-get')?.addEventListener('click', getTicket);
-    document.getElementById('btn-cancel')?.addEventListener('click', cancelTicket);
-    document.getElementById('btn-new')?.addEventListener('click', () => { clearMyTicket(); });
-    document.getElementById('btn-next')?.addEventListener('click', callNext);
-    document.getElementById('btn-done')?.addEventListener('click', markDone);
-    document.getElementById('btn-toggle')?.addEventListener('click', toggleOpen);
-    document.getElementById('btn-reset')?.addEventListener('click', resetAll);
-  }
-
-  // ─── Start ────────────────────────────────────────────────────
+  // ── Start ─────────────────────────────────────────
   startListeners();
   </script>
 </body>
