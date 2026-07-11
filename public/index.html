@@ -194,14 +194,15 @@
     .modal-title{font-size:19px;font-weight:800;margin-bottom:6px}
     .modal-sub{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.65}
     /* Slot picker */
-    .slot-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
-    .slot-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;cursor:pointer;transition:all .15s}
-    .slot-card:not(.full):active{background:rgba(var(--glow),.15)}
-    .slot-card.full{opacity:.35;cursor:not-allowed}
-    .slot-card.selected{border-color:var(--accent);background:rgba(var(--glow),.15);box-shadow:0 0 0 1px var(--accent)}
-    .slot-time{font-size:24px;font-weight:900}
-    .slot-date{font-size:11px;color:var(--muted);margin-top:1px}
-    .slot-avail{font-size:12px;font-weight:700;color:var(--accent3);margin-top:5px}
+    .slot-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+    .slot-item{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:space-between}
+    .slot-item:not(.full):active{background:rgba(var(--glow),.15)}
+    .slot-item.full{opacity:.38;cursor:not-allowed}
+    .slot-item.selected{border-color:var(--accent);background:rgba(var(--glow),.13);box-shadow:0 0 0 1px var(--accent)}
+    .slot-item-left{}
+    .slot-item-time{font-size:20px;font-weight:900;letter-spacing:.3px}
+    .slot-item-date{font-size:11px;color:var(--muted);margin-top:2px}
+    .slot-avail{font-size:12px;font-weight:700;color:var(--accent3)}
     .slot-avail.low{color:var(--warning)}
     .slot-avail.full{color:var(--muted)}
     /* Reservation card */
@@ -308,7 +309,7 @@
         await cfgRef.set({isOpen:true,nextNumber:1,maxCallCount:30,
           storeName:'Bon Voyage',slogan:'旅へ出よう',location:'中庭',theme:0,
           stampPassword:'1234',expireMinutes:5,minutesPerPerson:3,
-          reservationEnabled:false,slotsPerHour:10});
+          reservationEnabled:false,slotsPerHour:10,openHour:10,closeHour:16});
       } else { applyTheme(s.data().theme||0); }
     } catch(e){}
   }
@@ -446,15 +447,23 @@
   function getSlots(){
     const now=new Date();
     const sph=cfg?.slotsPerHour||10;
+    const openH=cfg?.openHour??10;
+    const closeH=cfg?.closeHour??16;
     const slots=[];
-    const start=new Date(now);
-    start.setMinutes(0,0,0);
-    start.setHours(start.getHours()+1);
-    for(let i=0;i<8;i++){
-      const d=new Date(start.getTime()+i*3600000);
-      const slotId=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}-${pad(d.getHours())}`;
-      const taken=reservations.filter(r=>r.slotId===slotId&&r.status!=='cancelled').length;
-      slots.push({id:slotId,time:`${pad(d.getHours())}:00`,date:`${d.getMonth()+1}/${d.getDate()}`,available:Math.max(0,sph-taken),max:sph});
+    // Try today, then tomorrow if no slots remain today
+    for(let dayOffset=0;dayOffset<=1;dayOffset++){
+      const base=new Date(now);
+      base.setDate(base.getDate()+dayOffset);
+      base.setMinutes(0,0,0);
+      for(let h=openH;h<closeH;h++){
+        const d=new Date(base);d.setHours(h);
+        // Skip slots that are already over (allow up to end of hour)
+        if(d.getTime()+3600000<=now.getTime())continue;
+        const slotId=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}-${pad(h)}`;
+        const taken=reservations.filter(r=>r.slotId===slotId&&r.status!=='cancelled').length;
+        slots.push({id:slotId,time:`${pad(h)}:00`,timeEnd:`${pad(h+1)}:00`,date:`${d.getMonth()+1}/${d.getDate()}`,available:Math.max(0,sph-taken),max:sph});
+      }
+      if(slots.length>0)break;
     }
     return slots;
   }
@@ -533,6 +542,8 @@
       expireMinutes:parseInt(f.expireMinutes.value)||5,
       minutesPerPerson:parseFloat(f.minutesPerPerson.value)||3,
       reservationEnabled:document.getElementById('inp-resv-enabled')?.checked||false,
+      openHour:parseInt(f.openHour.value)??10,
+      closeHour:parseInt(f.closeHour.value)??16,
       slotsPerHour:parseInt(f.slotsPerHour.value)||10,
       theme:themeVal
     });
@@ -678,16 +689,19 @@
     const slots=getSlots();
     return `<div class="page">
       <div class="header"><div class="badge">予約</div><h1>時間枠を選択</h1><p class="store-sub">ご希望の時間帯を選んでください</p></div>
-      <div class="slot-grid">
-        ${slots.map(s=>`<div class="slot-card ${s.available===0?'full':''} ${selectedSlot?.id===s.id?'selected':''}"
+      ${slots.length===0?`<div class="card"><div class="empty-msg">本日の予約受付時間外です</div></div>`:`
+      <div class="slot-list">
+        ${slots.map(s=>`<div class="slot-item ${s.available===0?'full':''} ${selectedSlot?.id===s.id?'selected':''}"
             ${s.available>0?`onclick="selectSlot('${s.id}','${s.time}','${s.date}',${s.available})"`:''}>
-          <div class="slot-time">${s.time}</div>
-          <div class="slot-date">${s.date}</div>
+          <div class="slot-item-left">
+            <div class="slot-item-time">${s.time} 〜 ${s.timeEnd}</div>
+            <div class="slot-item-date">${s.date}</div>
+          </div>
           <div class="slot-avail ${s.available===0?'full':s.available<=3?'low':''}">${s.available===0?'満席':`残${s.available}枠`}</div>
         </div>`).join('')}
-      </div>
+      </div>`}
       <button class="btn btn-primary" id="btn-to-reserve-form" ${!selectedSlot?'disabled':''}>
-        ${selectedSlot?`${selectedSlot.date} ${selectedSlot.time} で予約 →`:'時間を選んでください'}
+        ${selectedSlot?`${selectedSlot.date} ${selectedSlot.time} 〜 の枠で予約 →`:'時間帯を選んでください'}
       </button>
       <button class="btn btn-ghost" id="btn-back-home" style="margin-top:10px">← 戻る</button>
     </div>`;
@@ -698,7 +712,7 @@
     return `<div class="page">
       <div class="header">
         <div class="badge">予約</div><h1>予約情報入力</h1>
-        <p class="store-sub" style="color:var(--accent)">${selectedSlot?.date} ${selectedSlot?.time} の枠</p>
+        <p class="store-sub" style="color:var(--accent)">${selectedSlot?`${selectedSlot.date} ${selectedSlot.time} 〜 ${pad(parseInt(selectedSlot.time.split(':')[0])+1)}:00 の枠`:'--'}</p>
       </div>
       <div class="card">
         <div style="font-size:11px;color:var(--warning);margin-bottom:12px;padding:8px 10px;background:rgba(253,203,110,.08);border-radius:8px;border:1px solid rgba(253,203,110,.15)">
@@ -975,6 +989,14 @@
               <div style="font-size:11px;color:var(--muted);margin-top:3px">ホーム画面に「予約する」ボタンを表示</div>
             </div>
             <input type="checkbox" name="reservationEnabled" id="inp-resv-enabled" ${cfg.reservationEnabled?'checked':''} style="width:22px;height:22px;cursor:pointer;accent-color:var(--accent);flex-shrink:0">
+          </div>
+          <div class="field"><label class="field-label">受付開始時間（時）</label>
+            <input class="field-input" name="openHour" type="number" min="0" max="23" value="${cfg.openHour??10}" inputmode="numeric">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">例: 10 → 10:00から受付開始</div>
+          </div>
+          <div class="field"><label class="field-label">受付終了時間（時）</label>
+            <input class="field-input" name="closeHour" type="number" min="1" max="24" value="${cfg.closeHour??16}" inputmode="numeric">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">例: 16 → 15:00〜16:00の枠が最後</div>
           </div>
           <div class="field" style="margin-bottom:0"><label class="field-label">1時間あたりの予約枠数</label>
             <input class="field-input" name="slotsPerHour" type="number" min="1" max="100" value="${cfg.slotsPerHour||10}">
