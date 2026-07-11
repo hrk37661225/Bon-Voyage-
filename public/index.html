@@ -214,6 +214,17 @@
     /* Two-column action buttons */
     .btn-row{display:flex;gap:10px}
     .btn-row .btn{flex:1}
+    /* Staff ticket list */
+    .stk-row{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);margin-bottom:6px}
+    .stk-num{font-size:17px;font-weight:900;min-width:46px;font-variant-numeric:tabular-nums;color:var(--text)}
+    .stk-info{flex:1;min-width:0}
+    .stk-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .stk-meta{font-size:11px;color:var(--muted);margin-top:1px}
+    .stk-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:100px;white-space:nowrap;flex-shrink:0}
+    .stk-badge.waiting{background:rgba(253,203,110,.13);color:var(--warning)}
+    .stk-badge.called{background:rgba(var(--glow),.15);color:var(--accent2)}
+    .stk-badge.done{background:rgba(85,239,196,.1);color:var(--accent3)}
+    .stk-badge.cancelled{background:rgba(255,255,255,.05);color:var(--muted)}
   </style>
 </head>
 <body>
@@ -271,6 +282,7 @@
 
   let cfg=null, myTicket=null, tickets=[], isStaff=false;
   let reservations=[], myReservation=null;
+  let staffTickets=[], staffTicketsUnsub=null;
   let customerSubView='home'; // home | walkinForm | reserveSlots | reserveForm
   let selectedSlot=null;
   let formDraft={nickname:'',age:'',people:'1'};
@@ -551,12 +563,32 @@
     view='staff';render();
   }
 
-  function staffLogout(){isStaff=false;view='customer';render();toast('スタッフ画面を終了しました');}
+  function startStaffTicketsListener(){
+    if(staffTicketsUnsub)return;
+    staffTicketsUnsub=db.collection('tickets').orderBy('number','asc').onSnapshot(s=>{
+      staffTickets=s.docs.map(d=>({id:d.id,...d.data()}));
+      if(view==='staff')render();
+    });
+  }
+
+  async function callTicketById(id){
+    await db.collection('tickets').doc(id).update({
+      status:'called',calledAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    toast('呼び出しました');
+  }
+
+  function staffLogout(){
+    isStaff=false;view='customer';
+    if(staffTicketsUnsub){staffTicketsUnsub();staffTicketsUnsub=null;}
+    staffTickets=[];
+    render();toast('スタッフ画面を終了しました');
+  }
 
   function handleTap(){
     tapCount++;clearTimeout(tapTimer);
     tapTimer=setTimeout(()=>{tapCount=0;},1500);
-    if(tapCount>=5){tapCount=0;isStaff=true;view='staff';render();}
+    if(tapCount>=5){tapCount=0;isStaff=true;view='staff';startStaffTicketsListener();render();}
   }
 
   // ── Ticket helpers ────────────────────────────────
@@ -925,13 +957,21 @@
         <div class="stat-box"><div class="stat-num" style="color:var(--accent3)">${(cfg.nextNumber||1)-1}</div><div class="stat-label">発行済</div></div>
       </div>
       <div class="card">
-        <div class="sec">待機リスト (${waiting.length}人)</div>
-        <div class="queue-scroll">
-          ${tickets.length===0?'<div class="empty-msg">待機中のお客様はいません</div>':
-            tickets.map(t=>`<div class="q-item ${t.status==='called'?'active':''}">
-              <span class="q-num">No.${pad(t.number)}</span>
-              <span class="q-pill ${t.status}">${t.status==='called'?'呼出中':'待機中'}</span>
-            </div>`).join('')}
+        <div class="sec">整理券一覧 (発行済: ${staffTickets.length}枚)</div>
+        <div class="queue-scroll" style="max-height:320px">
+          ${staffTickets.length===0?'<div class="empty-msg">まだ整理券は発行されていません</div>':
+            staffTickets.map(t=>{
+              const badgeLabel=t.status==='waiting'?'待機中':t.status==='called'?'呼出中':t.status==='done'?'使用済み':'キャンセル';
+              return `<div class="stk-row">
+                <div class="stk-num">No.${pad(t.number)}</div>
+                <div class="stk-info">
+                  <div class="stk-name">${t.nickname||'--'} <span style="font-weight:400;font-size:11px;color:var(--muted)">${t.people||1}名 · ${t.age||'--'}歳</span></div>
+                  <div class="stk-meta">${formatDate(t.createdAt)||''}</div>
+                </div>
+                <span class="stk-badge ${t.status}">${badgeLabel}</span>
+                ${t.status==='waiting'?`<button class="btn-icon" onclick="callTicketById('${t.id}')" style="font-size:11px;padding:5px 8px;color:var(--accent2);border-color:rgba(var(--glow),.3);margin-left:4px">呼出</button>`:''}
+              </div>`;
+            }).join('')}
         </div>
       </div>
       <div class="card">
