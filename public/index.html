@@ -117,7 +117,6 @@
     .stamp-header{margin-bottom:10px}
     .stamp-title{font-size:14px;font-weight:700}
     .stamp-sub{font-size:11px;color:var(--muted);margin-top:3px}
-    .stamp-canvas{width:100%;border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;cursor:crosshair;touch-action:none;display:block;background:rgba(255,255,255,.02)}
 
     /* Display board */
     .display-root{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;position:relative}
@@ -216,7 +215,6 @@
   let cfg=null, myTicket=null, tickets=[], staffUser=null;
   let view = INITIAL_MODE === 'display' ? 'display' : INITIAL_MODE === 'staff' ? 'staff' : 'customer';
   let tapCount=0, tapTimer;
-  let canvasDrawn=false;
 
   // ── Utils ─────────────────────────────────────────
   let toastT;
@@ -247,7 +245,7 @@
       const s=await cfgRef.get();
       if (!s.exists) {
         await cfgRef.set({isOpen:true,nextNumber:1,maxCallCount:30,
-          storeName:'Bon Voyage',slogan:'旅へ出よう',location:'中庭',theme:0});
+          storeName:'Bon Voyage',slogan:'旅へ出よう',location:'中庭',theme:0,stampPassword:'1234'});
       } else { applyTheme(s.data().theme||0); }
     } catch(e){}
   }
@@ -321,12 +319,17 @@
   }
 
   async function submitStamp() {
-    const canvas=document.getElementById('stamp-canvas');
-    if(!canvas||!myTicket||!canvasDrawn){toast('サインを記入してください');return;}
-    if(!confirm('承認しますか？'))return;
-    const sig=canvas.toDataURL('image/jpeg',.35);
+    if(!myTicket)return;
+    const input=document.getElementById('stamp-code');
+    const entered=(input?.value||'').trim();
+    if(!entered){toast('承認コードを入力してください');return;}
+    if(entered !== (cfg.stampPassword||'1234')){
+      toast('承認コードが違います');
+      if(input)input.value='';
+      return;
+    }
     await db.collection('tickets').doc(myTicket.id).update({
-      status:'done',signature:sig,
+      status:'done',
       doneAt:firebase.firestore.FieldValue.serverTimestamp()
     });
     toast('承認しました');
@@ -374,6 +377,7 @@
       slogan:f.slogan.value||'',
       location:f.location.value||'中庭',
       maxCallCount:parseInt(f.maxCallCount.value)||30,
+      stampPassword:f.stampPassword.value||'1234',
       theme:themeVal
     });
     toast('設定を保存しました');
@@ -402,63 +406,6 @@
     if(tapCount>=5){tapCount=0;view='staff';render();}
   }
 
-  // ── Canvas ────────────────────────────────────────
-  function initCanvas(){
-    const canvas=document.getElementById('stamp-canvas');
-    if(!canvas)return;
-    canvasDrawn=false;
-    const r=canvas.getBoundingClientRect();
-    canvas.width=r.width||280; canvas.height=130;
-    const ctx=canvas.getContext('2d');
-    drawPlaceholder(ctx,canvas.width,canvas.height);
-    let drawing=false,firstDraw=true;
-
-    function getPos(e){
-      const rc=canvas.getBoundingClientRect();
-      const src=e.touches?e.touches[0]:e;
-      return{x:(src.clientX-rc.left)*(canvas.width/rc.width),y:(src.clientY-rc.top)*(canvas.height/rc.height)};
-    }
-    function start(e){
-      e.preventDefault();
-      if(firstDraw){ctx.clearRect(0,0,canvas.width,canvas.height);firstDraw=false;}
-      drawing=true;canvasDrawn=true;
-      const p=getPos(e);
-      ctx.beginPath();ctx.moveTo(p.x,p.y);
-      ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#7c6cf0';
-      ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';
-      updateStampBtn();
-    }
-    function move(e){
-      e.preventDefault();if(!drawing)return;
-      const p=getPos(e);ctx.lineTo(p.x,p.y);ctx.stroke();
-    }
-    function end(){drawing=false;}
-    canvas.addEventListener('mousedown',start);
-    canvas.addEventListener('mousemove',move);
-    canvas.addEventListener('mouseup',end);
-    canvas.addEventListener('touchstart',start,{passive:false});
-    canvas.addEventListener('touchmove',move,{passive:false});
-    canvas.addEventListener('touchend',end);
-
-    document.getElementById('btn-clear-stamp')?.addEventListener('click',()=>{
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      drawPlaceholder(ctx,canvas.width,canvas.height);
-      canvasDrawn=false;firstDraw=true;updateStampBtn();
-    });
-  }
-
-  function drawPlaceholder(ctx,w,h){
-    ctx.fillStyle='rgba(255,255,255,.03)';ctx.fillRect(0,0,w,h);
-    ctx.fillStyle='rgba(255,255,255,.18)';ctx.font='12px sans-serif';ctx.textAlign='center';
-    ctx.fillText('スタッフがここにサインしてください',w/2,h/2-7);
-    ctx.fillText('（タッチペンまたは指で記入）',w/2,h/2+11);
-  }
-
-  function updateStampBtn(){
-    const btn=document.getElementById('btn-stamp');
-    if(btn)btn.disabled=!canvasDrawn;
-  }
-
   // ── Render ────────────────────────────────────────
   function render(){
     if(!cfg)return;
@@ -475,7 +422,6 @@
     else if(view==='staff'&&staffUser)bindStaff();
     else if(view==='settings'&&staffUser)bindSettings();
     else if(!staffUser)bindLogin();
-    if(document.getElementById('stamp-canvas'))setTimeout(initCanvas,60);
   }
 
   // ── renderCustomer ────────────────────────────────
@@ -520,8 +466,7 @@
           <div style="font-size:18px;font-weight:800;margin-top:10px;color:var(--accent3)">ご利用ありがとうございました</div>
           <div style="margin-top:20px;font-size:10px;letter-spacing:2px;color:var(--muted)">YOUR NUMBER</div>
           <div style="font-size:52px;font-weight:900;color:var(--accent3);line-height:1">No.${pad(myTicket.number)}</div>
-          ${myTicket.signature?`<div style="margin-top:14px;font-size:11px;color:var(--muted)">✓ スタッフ承認済み</div>
-          <img src="${myTicket.signature}" style="max-width:180px;border:1px solid var(--border);border-radius:8px;margin-top:8px">`:``}
+          <div style="margin-top:14px;font-size:11px;color:var(--muted)">✓ スタッフ承認済み</div>
         </div>
         <button class="btn btn-ghost" id="btn-new" style="margin-top:12px">新しい整理券を取る</button>
         <div class="center" style="margin-top:20px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
@@ -544,14 +489,11 @@
         </div>
         <div class="card">
           <div class="stamp-header">
-            <div class="stamp-title">🖊 スタッフ用スタンプ欄</div>
-            <div class="stamp-sub">スタッフがサインすると承認完了になります（使い回し防止）</div>
+            <div class="stamp-title">🔑 スタッフ用承認</div>
+            <div class="stamp-sub">スタッフが承認コードを入力してください（使い回し防止）</div>
           </div>
-          <canvas id="stamp-canvas" class="stamp-canvas" height="130"></canvas>
-          <div style="display:flex;gap:8px;margin-top:10px">
-            <button class="btn btn-ghost" id="btn-clear-stamp" style="font-size:13px;padding:10px;flex:1">消去</button>
-            <button class="btn btn-success" id="btn-stamp" disabled style="flex:2">承認する ✓</button>
-          </div>
+          <input class="field-input" id="stamp-code" type="password" inputmode="numeric" placeholder="承認コードを入力" autocomplete="off" style="margin-top:8px;letter-spacing:6px;font-size:20px;text-align:center">
+          <button class="btn btn-success" id="btn-stamp" style="margin-top:10px">承認する ✓</button>
         </div>
         <div class="center" style="margin-top:16px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
       </div>`;
@@ -645,6 +587,7 @@
             </select>
           </div>
           <div class="field"><label class="field-label">呼び出し人数（初期値）</label><input class="field-input" name="maxCallCount" type="number" min="1" max="999" value="${cfg.maxCallCount||30}"></div>
+          <div class="field"><label class="field-label">スタッフ承認コード</label><input class="field-input" name="stampPassword" type="text" inputmode="numeric" placeholder="例: 1234" value="${cfg.stampPassword||'1234'}"></div>
         </div>
         <div class="card">
           <div class="sec">テーマ（背景・カラー）</div>
@@ -706,6 +649,7 @@
     document.getElementById('btn-cancel')?.addEventListener('click',cancelTicket);
     document.getElementById('btn-new')?.addEventListener('click',()=>{clearMyTicket();});
     document.getElementById('btn-stamp')?.addEventListener('click',submitStamp);
+    document.getElementById('stamp-code')?.addEventListener('keydown',e=>{if(e.key==='Enter')submitStamp();});
   }
   function bindStaff(){
     document.getElementById('btn-minus')?.addEventListener('click',()=>updateCallCount(-1));
