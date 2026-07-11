@@ -514,7 +514,9 @@
     const old=cfg.maxCallCount||30;
     const next=Math.max(1,old+delta);
     if(next>old) {
-      const toCall=tickets.filter(t=>t.status==='waiting'&&t.number>old&&t.number<=next);
+      // staffTickets includes all statuses; falls back to tickets if staff listener not started
+      const pool=staffTickets.length>0?staffTickets:tickets;
+      const toCall=pool.filter(t=>t.status==='waiting'&&t.number>old&&t.number<=next);
       if(toCall.length>0){
         const batch=db.batch();
         toCall.forEach(t=>batch.update(db.collection('tickets').doc(t.id),{
