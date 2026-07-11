@@ -531,18 +531,25 @@
 
   async function toggleOpen(){
     if(!cfg)return;
+    if(cfg.isOpen&&!confirm('受付を停止しますか？\n新しい整理券が取れなくなります。'))return;
     await cfgRef.update({isOpen:!cfg.isOpen});
     toast(cfg.isOpen?'受付を停止しました':'受付を再開しました');
   }
 
   async function resetAll(){
-    if(!confirm('全データをリセットしますか？\nこの操作は取り消せません。'))return;
-    const s=await db.collection('tickets').get();
+    if(!confirm('⚠ 全データをリセットしますか？\n\n整理券・予約が全て削除されます。\nこの操作は絶対に取り消せません。'))return;
+    if(!confirm('本当によろしいですか？\n再度確認します。'))return;
+    const [tSnap,rSnap]=await Promise.all([
+      db.collection('tickets').get(),
+      db.collection('reservations').get()
+    ]);
     const batch=db.batch();
-    s.docs.forEach(d=>batch.delete(d.ref));
+    tSnap.docs.forEach(d=>batch.delete(d.ref));
+    rSnap.docs.forEach(d=>batch.delete(d.ref));
     await batch.commit();
     await cfgRef.update({nextNumber:1,maxCallCount:30});
-    toast('リセットしました');
+    staffTickets=[];
+    toast('全データをリセットしました');
   }
 
   async function saveSettings(f){
@@ -574,10 +581,31 @@
   }
 
   async function callTicketById(id){
+    const t=staffTickets.find(t=>t.id===id);
+    if(!t)return;
+    if(!confirm(`No.${pad(t.number)} ${t.nickname?`(${t.nickname})`:''} を呼び出しますか？`))return;
     await db.collection('tickets').doc(id).update({
       status:'called',calledAt:firebase.firestore.FieldValue.serverTimestamp()
     });
-    toast('呼び出しました');
+    toast(`No.${pad(t.number)} を呼び出しました`);
+  }
+
+  async function doneTicketById(id){
+    const t=staffTickets.find(t=>t.id===id);
+    if(!t)return;
+    if(!confirm(`No.${pad(t.number)} ${t.nickname?`(${t.nickname})`:''} を使用済みにしますか？`))return;
+    await db.collection('tickets').doc(id).update({
+      status:'done',doneAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    toast(`No.${pad(t.number)} を使用済みにしました`);
+  }
+
+  async function cancelTicketById(id){
+    const t=staffTickets.find(t=>t.id===id);
+    if(!t)return;
+    if(!confirm(`No.${pad(t.number)} ${t.nickname?`(${t.nickname})`:''} をキャンセルしますか？`))return;
+    await db.collection('tickets').doc(id).update({status:'cancelled'});
+    toast(`No.${pad(t.number)} をキャンセルしました`);
   }
 
   function staffLogout(){
@@ -694,8 +722,8 @@
       <button class="btn btn-primary" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''}>整理券を取る（当日券）</button>
       ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
       ${waitList.length>0?`<div class="card" style="margin-top:14px">
-        <div class="row"><span class="row-label">呼び出し中</span><span class="row-value" style="color:var(--accent2)">No.01 〜 No.${pad(maxCall)}</span></div>
-        <div class="row"><span class="row-label">待機人数</span><span class="row-value">${waitList.length}人</span></div>
+        <div class="row"><span class="row-label">現在の待機人数</span><span class="row-value">${waitList.length}人</span></div>
+        ${cfg.minutesPerPerson?`<div class="row"><span class="row-label">目安の待ち時間</span><span class="row-value" style="color:var(--accent3)">約${Math.round(waitList.length*(cfg.minutesPerPerson||3))}分</span></div>`:''}
       </div>`:''}
       <div class="center" style="margin-top:28px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
       <div class="center" style="margin-top:8px"><a class="link" href="?mode=display" target="_blank">📺 表示ボードを開く</a></div>
@@ -866,6 +894,13 @@
         <div class="badge">${isDone?'SOUVENIR TICKET':'BON VOYAGE'}</div>
         ${isDone?`<div style="font-size:11px;color:var(--muted);margin-top:5px">お土産として保存できます</div>`:''}
       </div>
+      ${isCalled?`<div style="background:linear-gradient(135deg,rgba(var(--glow),.85),rgba(var(--glow),.45));border:2px solid rgba(var(--glow),.9);border-radius:18px;padding:22px 16px 18px;text-align:center;margin-bottom:14px;animation:glowPulse 1.2s ease-in-out infinite;box-shadow:0 0 48px rgba(var(--glow),.55)">
+        <div style="font-size:40px;line-height:1;margin-bottom:8px">🔔</div>
+        <div style="font-size:26px;font-weight:900;color:#fff;letter-spacing:1px;text-shadow:0 0 20px rgba(255,255,255,.5)">あなたの番です！</div>
+        <div style="font-size:14px;color:rgba(255,255,255,.85);margin-top:8px;line-height:1.6">
+          今すぐ <strong style="color:#fff;font-size:16px">${cfg.location||'カウンター'}</strong> へお越しください
+        </div>
+      </div>`:''}
 
       <div class="ticket-card ${myTicket.status}">
         <div class="tc-top">
@@ -971,7 +1006,11 @@
                   <div class="stk-meta">${formatDate(t.createdAt)||''}</div>
                 </div>
                 <span class="stk-badge ${t.status}">${badgeLabel}</span>
-                ${t.status==='waiting'?`<button class="btn-icon" onclick="callTicketById('${t.id}')" style="font-size:11px;padding:5px 8px;color:var(--accent2);border-color:rgba(var(--glow),.3);margin-left:4px">呼出</button>`:''}
+                <div style="display:flex;flex-direction:column;gap:4px;margin-left:4px">
+                  ${t.status==='waiting'?`<button class="btn-icon" onclick="callTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--accent2);border-color:rgba(var(--glow),.3)">呼出</button>`:''}
+                  ${t.status==='called'?`<button class="btn-icon" onclick="doneTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--accent3);border-color:rgba(85,239,196,.3)">完了</button>`:''}
+                  ${(t.status==='waiting'||t.status==='called')?`<button class="btn-icon" onclick="cancelTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--danger);border-color:rgba(255,118,117,.3)">取消</button>`:''}
+                </div>
               </div>`;
             }).join('')}
         </div>
