@@ -240,7 +240,6 @@
     messagingSenderId:"463034107039",
     appId:"1:463034107039:web:9528b908a43083f518ceaa"
   });
-  const auth = firebase.auth();
   const db = firebase.firestore();
   db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 
@@ -249,7 +248,7 @@
   let sid = localStorage.getItem('bv_sid');
   if (!sid) { sid=Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem('bv_sid',sid); }
 
-  let cfg=null, myTicket=null, tickets=[], staffUser=null;
+  let cfg=null, myTicket=null, tickets=[], isStaff=false;
   let view = INITIAL_MODE === 'display' ? 'display' : INITIAL_MODE === 'staff' ? 'staff' : 'customer';
   let tapCount=0, tapTimer, expireTimer, expireTimerId;
 
@@ -433,26 +432,12 @@
     view='staff';render();
   }
 
-  // ── Auth ──────────────────────────────────────────
-  auth.onAuthStateChanged(u=>{
-    staffUser=u;
-    if(view==='staff'||view==='settings')render();
-  });
-
-  async function signIn(email,pass){
-    try{
-      await auth.signInWithEmailAndPassword(email,pass);
-      toast('ログインしました');view='staff';render();
-    }catch(e){toast('ログインに失敗しました');}
-  }
-  async function signOut(){
-    await auth.signOut();view='customer';render();toast('ログアウトしました');
-  }
+  function staffLogout(){isStaff=false;view='customer';render();toast('スタッフ画面を終了しました');}
 
   function handleTap(){
     tapCount++;clearTimeout(tapTimer);
     tapTimer=setTimeout(()=>{tapCount=0;},1500);
-    if(tapCount>=5){tapCount=0;view='staff';render();}
+    if(tapCount>=5){tapCount=0;isStaff=true;view='staff';render();}
   }
 
   // ── Ticket helpers ────────────────────────────────
@@ -498,17 +483,16 @@
     if(!cfg)return;
     const root=document.getElementById('root');
     if(view==='display')     {root.innerHTML=renderDisplay();return;}
-    if(view==='staff')       {root.innerHTML=staffUser?renderStaff():renderLogin();}
-    else if(view==='settings'){root.innerHTML=staffUser?renderSettings():renderLogin();}
+    if(view==='staff')       {root.innerHTML=renderStaff();}
+    else if(view==='settings'){root.innerHTML=renderSettings();}
     else                     {root.innerHTML=renderCustomer();}
     postRender();
   }
 
   function postRender(){
     if(view==='customer')bindCustomer();
-    else if(view==='staff'&&staffUser)bindStaff();
-    else if(view==='settings'&&staffUser)bindSettings();
-    else if(!staffUser)bindLogin();
+    else if(view==='staff')bindStaff();
+    else if(view==='settings')bindSettings();
     if(view==='customer'&&myTicket?.status==='called')startExpireTimer();
   }
 
@@ -693,7 +677,7 @@
         <button class="btn" id="btn-reset" style="background:rgba(255,118,117,.08);color:var(--danger);border:1px solid rgba(255,118,117,.2)">全データをリセット</button>
       </div>
       <div class="center" style="margin-top:10px"><a class="link" href="?mode=display" target="_blank">📺 表示ボードを別タブで開く</a></div>
-      <div class="center" style="margin-top:10px"><button onclick="signOut()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px">ログアウト</button></div>
+      <div class="center" style="margin-top:10px"><button onclick="staffLogout()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px">スタッフ画面を終了</button></div>
     </div>`;
   }
 
@@ -738,23 +722,7 @@
     </div>`;
   }
 
-  // ── renderLogin ───────────────────────────────────
-  function renderLogin(){
-    return `<div class="page">
-      <div class="header"><div class="badge">STAFF</div><h1>スタッフログイン</h1><p class="store-sub">Firebaseアカウントでログイン</p></div>
-      <div class="card">
-        <div class="field"><label class="field-label">メールアドレス</label><input class="field-input" id="login-email" type="email" placeholder="staff@example.com" autocomplete="email"></div>
-        <div class="field"><label class="field-label">パスワード</label><input class="field-input" id="login-pass" type="password" placeholder="パスワード" autocomplete="current-password"></div>
-        <div class="sp"></div>
-        <button class="btn btn-primary" id="btn-login">ログイン</button>
-      </div>
-      <div class="center" style="margin-top:14px">
-        <button onclick="view='customer';render()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px">← 一般画面に戻る</button>
-      </div>
-    </div>`;
-  }
-
-  // ── renderDisplay ─────────────────────────────────
+// ── renderDisplay ─────────────────────────────────
   function renderDisplay(){
     const maxCall=cfg?.maxCallCount||30;
     const waitCount=tickets.filter(t=>t.status==='waiting').length;
@@ -797,16 +765,7 @@
       });
     });
   }
-  function bindLogin(){
-    document.getElementById('btn-login')?.addEventListener('click',()=>{
-      const e=document.getElementById('login-email')?.value;
-      const p=document.getElementById('login-pass')?.value;
-      if(e&&p)signIn(e,p); else toast('メールアドレスとパスワードを入力してください');
-    });
-    document.getElementById('login-pass')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('btn-login')?.click();});
-  }
-
-  // ── Start ─────────────────────────────────────────
+// ── Start ─────────────────────────────────────────
   startListeners();
   </script>
 </body>
