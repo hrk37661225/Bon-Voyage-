@@ -193,6 +193,26 @@
     @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
     .modal-title{font-size:19px;font-weight:800;margin-bottom:6px}
     .modal-sub{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.65}
+    /* Slot picker */
+    .slot-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+    .slot-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;cursor:pointer;transition:all .15s}
+    .slot-card:not(.full):active{background:rgba(var(--glow),.15)}
+    .slot-card.full{opacity:.35;cursor:not-allowed}
+    .slot-card.selected{border-color:var(--accent);background:rgba(var(--glow),.15);box-shadow:0 0 0 1px var(--accent)}
+    .slot-time{font-size:24px;font-weight:900}
+    .slot-date{font-size:11px;color:var(--muted);margin-top:1px}
+    .slot-avail{font-size:12px;font-weight:700;color:var(--accent3);margin-top:5px}
+    .slot-avail.low{color:var(--warning)}
+    .slot-avail.full{color:var(--muted)}
+    /* Reservation card */
+    .resv-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .resv-info{flex:1;min-width:0}
+    .resv-name{font-size:15px;font-weight:700}
+    .resv-meta{font-size:11px;color:var(--muted);margin-top:2px}
+    .resv-slot-label{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin:12px 0 6px}
+    /* Two-column action buttons */
+    .btn-row{display:flex;gap:10px}
+    .btn-row .btn{flex:1}
   </style>
 </head>
 <body>
@@ -249,6 +269,11 @@
   if (!sid) { sid=Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem('bv_sid',sid); }
 
   let cfg=null, myTicket=null, tickets=[], isStaff=false;
+  let reservations=[], myReservation=null;
+  let customerSubView='home'; // home | walkinForm | reserveSlots | reserveForm
+  let selectedSlot=null;
+  let formDraft={nickname:'',age:'',people:'1'};
+  let reserveDraft={name:'',age:'',people:'1',idType:''};
   let view = INITIAL_MODE === 'display' ? 'display' : INITIAL_MODE === 'staff' ? 'staff' : 'customer';
   let tapCount=0, tapTimer, expireTimer, expireTimerId;
 
@@ -282,7 +307,8 @@
       if (!s.exists) {
         await cfgRef.set({isOpen:true,nextNumber:1,maxCallCount:30,
           storeName:'Bon Voyage',slogan:'旅へ出よう',location:'中庭',theme:0,
-          stampPassword:'1234',expireMinutes:5,minutesPerPerson:3});
+          stampPassword:'1234',expireMinutes:5,minutesPerPerson:3,
+          reservationEnabled:false,slotsPerHour:10});
       } else { applyTheme(s.data().theme||0); }
     } catch(e){}
   }
@@ -300,8 +326,14 @@
       tickets=s.docs.map(d=>({id:d.id,...d.data()}));
       render();
     });
+    db.collection('reservations').where('status','in',['reserved','arrived']).orderBy('slotId','asc').onSnapshot(s=>{
+      reservations=s.docs.map(d=>({id:d.id,...d.data()}));
+      render();
+    });
     const saved=localStorage.getItem('bv_ticket_id');
     if(saved && INITIAL_MODE==='customer') listenMyTicket(saved);
+    const savedR=localStorage.getItem('bv_reservation_id');
+    if(savedR && INITIAL_MODE==='customer') listenMyReservation(savedR);
   }
 
   function listenMyTicket(id) {
@@ -327,30 +359,104 @@
   }
 
   // ── Customer actions ──────────────────────────────
-  async function getTicket() {
+  async function getTicketWithForm(fd) {
     if(!cfg?.isOpen){toast('現在受付を停止しています');return;}
     if(localStorage.getItem('bv_ticket_id')){toast('すでに整理券をお持ちです');return;}
-    const btn=document.getElementById('btn-get');
+    const btn=document.getElementById('btn-submit-walkin');
     if(btn)btn.disabled=true;
     try {
       const num=cfg.nextNumber;
       const maxCall=cfg.maxCallCount||30;
       const status=num<=maxCall?'called':'waiting';
       const ref=await db.collection('tickets').add({
-        number:num,status,sid,
+        number:num,status,sid,type:'walkin',
+        nickname:fd.nickname,age:parseInt(fd.age)||0,people:parseInt(fd.people)||1,
         createdAt:firebase.firestore.FieldValue.serverTimestamp(),
         calledAt:status==='called'?firebase.firestore.FieldValue.serverTimestamp():null
       });
       await cfgRef.update({nextNumber:firebase.firestore.FieldValue.increment(1)});
       localStorage.setItem('bv_ticket_id',ref.id);
-      myTicket={id:ref.id,number:num,status};
+      myTicket={id:ref.id,number:num,status,...fd};
       listenMyTicket(ref.id);
+      customerSubView='home';
       if(status==='called'){playChime();if(navigator.vibrate)navigator.vibrate([200,80,200]);}
       toast(`整理券 No.${pad(num)} を取得しました`);
     } catch(e){
       toast('エラーが発生しました。再試行してください');
       if(btn)btn.disabled=false;
     }
+  }
+
+  function listenMyReservation(id){
+    db.collection('reservations').doc(id).onSnapshot(s=>{
+      if(!s.exists){clearMyReservation();return;}
+      const data=s.data();
+      if(data.status==='cancelled'){clearMyReservation();return;}
+      myReservation={id:s.id,...data};
+      render();
+    });
+  }
+  function clearMyReservation(){
+    myReservation=null;localStorage.removeItem('bv_reservation_id');render();
+  }
+
+  async function cancelReservation(){
+    if(!myReservation)return;
+    if(!confirm('予約をキャンセルしますか？'))return;
+    await db.collection('reservations').doc(myReservation.id).update({status:'cancelled'});
+    clearMyReservation();toast('予約をキャンセルしました');
+  }
+
+  async function makeReservation(fd){
+    if(!cfg?.reservationEnabled){toast('現在予約を受け付けていません');return;}
+    if(localStorage.getItem('bv_reservation_id')){toast('すでに予約があります');return;}
+    if(!selectedSlot){toast('時間枠を選んでください');return;}
+    const taken=reservations.filter(r=>r.slotId===selectedSlot.id&&r.status!=='cancelled').length;
+    if(taken>=(cfg.slotsPerHour||10)){toast('この時間枠は満席です');return;}
+    const btn=document.getElementById('btn-submit-reserve');
+    if(btn)btn.disabled=true;
+    try{
+      const ref=await db.collection('reservations').add({
+        slotId:selectedSlot.id,slotTime:selectedSlot.time,slotDate:selectedSlot.date,
+        name:fd.name,age:parseInt(fd.age)||0,people:parseInt(fd.people)||1,idType:fd.idType,
+        status:'reserved',sid,createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      localStorage.setItem('bv_reservation_id',ref.id);
+      myReservation={id:ref.id,...fd,slotId:selectedSlot.id,slotTime:selectedSlot.time,slotDate:selectedSlot.date,status:'reserved'};
+      listenMyReservation(ref.id);
+      customerSubView='home';selectedSlot=null;
+      toast('予約しました！');render();
+    }catch(e){toast('エラーが発生しました');if(btn)btn.disabled=false;}
+  }
+
+  async function markArrived(id){
+    await db.collection('reservations').doc(id).update({status:'arrived',arrivedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    toast('来場確認しました');
+  }
+  async function cancelReservationById(id){
+    if(!confirm('この予約をキャンセルしますか？'))return;
+    await db.collection('reservations').doc(id).update({status:'cancelled'});
+    toast('予約をキャンセルしました');
+  }
+
+  function selectSlot(id,time,date,available){
+    selectedSlot={id,time,date,available};render();
+  }
+
+  function getSlots(){
+    const now=new Date();
+    const sph=cfg?.slotsPerHour||10;
+    const slots=[];
+    const start=new Date(now);
+    start.setMinutes(0,0,0);
+    start.setHours(start.getHours()+1);
+    for(let i=0;i<8;i++){
+      const d=new Date(start.getTime()+i*3600000);
+      const slotId=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}-${pad(d.getHours())}`;
+      const taken=reservations.filter(r=>r.slotId===slotId&&r.status!=='cancelled').length;
+      slots.push({id:slotId,time:`${pad(d.getHours())}:00`,date:`${d.getMonth()+1}/${d.getDate()}`,available:Math.max(0,sph-taken),max:sph});
+    }
+    return slots;
   }
 
   async function cancelTicket() {
@@ -426,6 +532,8 @@
       stampPassword:f.stampPassword.value||'1234',
       expireMinutes:parseInt(f.expireMinutes.value)||5,
       minutesPerPerson:parseFloat(f.minutesPerPerson.value)||3,
+      reservationEnabled:document.getElementById('inp-resv-enabled')?.checked||false,
+      slotsPerHour:parseInt(f.slotsPerHour.value)||10,
       theme:themeVal
     });
     toast('設定を保存しました');
@@ -481,6 +589,18 @@
   // ── Render ────────────────────────────────────────
   function render(){
     if(!cfg)return;
+    // Preserve form state across re-renders
+    if(view==='customer'&&customerSubView==='walkinForm'){
+      formDraft.nickname=document.getElementById('inp-nickname')?.value??formDraft.nickname;
+      formDraft.age=document.getElementById('inp-age')?.value??formDraft.age;
+      formDraft.people=document.getElementById('inp-people')?.value??formDraft.people;
+    }
+    if(view==='customer'&&customerSubView==='reserveForm'){
+      reserveDraft.name=document.getElementById('inp-name')?.value??reserveDraft.name;
+      reserveDraft.age=document.getElementById('inp-reserve-age')?.value??reserveDraft.age;
+      reserveDraft.people=document.getElementById('inp-reserve-people')?.value??reserveDraft.people;
+      reserveDraft.idType=document.getElementById('inp-idtype')?.value??reserveDraft.idType;
+    }
     const root=document.getElementById('root');
     if(view==='display')     {root.innerHTML=renderDisplay();return;}
     if(view==='staff')       {root.innerHTML=renderStaff();}
@@ -498,42 +618,169 @@
 
   // ── renderCustomer ────────────────────────────────
   function renderCustomer(){
+    if(myTicket) return renderTicketView();
+    if(myReservation) return renderReservationView();
+    if(customerSubView==='walkinForm') return renderWalkInForm();
+    if(customerSubView==='reserveSlots') return renderReserveSlots();
+    if(customerSubView==='reserveForm') return renderReserveForm();
+    return renderCustomerHome();
+  }
+
+  function renderCustomerHome(){
     const sn=cfg.storeName||'整理券システム';
     const waitList=tickets.filter(t=>t.status==='waiting');
-    const calledList=tickets.filter(t=>t.status==='called');
     const maxCall=cfg.maxCallCount||30;
     const logoTap=`onclick="handleTap()"`;
+    return `<div class="page">
+      <div class="header">
+        <div class="badge">BON VOYAGE</div>
+        <h1>${sn}</h1>
+        ${cfg.slogan?`<p class="store-sub">${cfg.slogan}</p>`:''}
+        ${cfg.location?`<p class="store-loc">📍 ${cfg.location}</p>`:''}
+      </div>
+      ${!cfg.isOpen?`<div class="card warn" style="text-align:center"><div style="font-weight:700;color:var(--warning)">現在受付を停止しています</div><div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div></div>`:''}
+      <div class="card">
+        <div class="ticket-box">
+          <div class="ticket-label">NEXT NUMBER</div>
+          <div class="ticket-num ${!cfg.isOpen?'dim':''}">${cfg.isOpen?`No.${pad(cfg.nextNumber)}`:'--'}</div>
+          <div style="color:var(--muted);font-size:12px;margin-top:4px">${cfg.isOpen?'次の発行番号':''}</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''}>整理券を取る（当日券）</button>
+      ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
+      ${waitList.length>0?`<div class="card" style="margin-top:14px">
+        <div class="row"><span class="row-label">呼び出し中</span><span class="row-value" style="color:var(--accent2)">No.01 〜 No.${pad(maxCall)}</span></div>
+        <div class="row"><span class="row-label">待機人数</span><span class="row-value">${waitList.length}人</span></div>
+      </div>`:''}
+      <div class="center" style="margin-top:28px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
+      <div class="center" style="margin-top:8px"><a class="link" href="?mode=display" target="_blank">📺 表示ボードを開く</a></div>
+    </div>`;
+  }
 
-    if(!myTicket){
-      return `<div class="page">
-        <div class="header">
-          <div class="badge">BON VOYAGE</div>
-          <h1>${sn}</h1>
-          ${cfg.slogan?`<p class="store-sub">${cfg.slogan}</p>`:''}
-          ${cfg.location?`<p class="store-loc">📍 ${cfg.location}</p>`:''}
+  function renderWalkInForm(){
+    const sn=cfg.storeName||'整理券システム';
+    return `<div class="page">
+      <div class="header"><div class="badge">当日券</div><h1>整理券取得</h1><p class="store-sub">情報を入力してください</p></div>
+      <div class="card">
+        <div class="field"><label class="field-label">ニックネーム *</label>
+          <input class="field-input" id="inp-nickname" type="text" placeholder="例: たろう" value="${formDraft.nickname}" maxlength="20" autocomplete="off"></div>
+        <div class="field"><label class="field-label">年齢 *</label>
+          <input class="field-input" id="inp-age" type="number" placeholder="例: 17" min="0" max="120" value="${formDraft.age}" inputmode="numeric"></div>
+        <div class="field" style="margin-bottom:0"><label class="field-label">人数 *</label>
+          <input class="field-input" id="inp-people" type="number" placeholder="1" min="1" max="20" value="${formDraft.people}" inputmode="numeric"></div>
+      </div>
+      <button class="btn btn-primary" id="btn-submit-walkin">整理券を取る</button>
+      <button class="btn btn-ghost" id="btn-back-home" style="margin-top:10px">← 戻る</button>
+    </div>`;
+  }
+
+  function renderReserveSlots(){
+    const slots=getSlots();
+    return `<div class="page">
+      <div class="header"><div class="badge">予約</div><h1>時間枠を選択</h1><p class="store-sub">ご希望の時間帯を選んでください</p></div>
+      <div class="slot-grid">
+        ${slots.map(s=>`<div class="slot-card ${s.available===0?'full':''} ${selectedSlot?.id===s.id?'selected':''}"
+            ${s.available>0?`onclick="selectSlot('${s.id}','${s.time}','${s.date}',${s.available})"`:''}>
+          <div class="slot-time">${s.time}</div>
+          <div class="slot-date">${s.date}</div>
+          <div class="slot-avail ${s.available===0?'full':s.available<=3?'low':''}">${s.available===0?'満席':`残${s.available}枠`}</div>
+        </div>`).join('')}
+      </div>
+      <button class="btn btn-primary" id="btn-to-reserve-form" ${!selectedSlot?'disabled':''}>
+        ${selectedSlot?`${selectedSlot.date} ${selectedSlot.time} で予約 →`:'時間を選んでください'}
+      </button>
+      <button class="btn btn-ghost" id="btn-back-home" style="margin-top:10px">← 戻る</button>
+    </div>`;
+  }
+
+  function renderReserveForm(){
+    const ID_TYPES=['学生証','運転免許証','マイナンバーカード','パスポート','その他'];
+    return `<div class="page">
+      <div class="header">
+        <div class="badge">予約</div><h1>予約情報入力</h1>
+        <p class="store-sub" style="color:var(--accent)">${selectedSlot?.date} ${selectedSlot?.time} の枠</p>
+      </div>
+      <div class="card">
+        <div style="font-size:11px;color:var(--warning);margin-bottom:12px;padding:8px 10px;background:rgba(253,203,110,.08);border-radius:8px;border:1px solid rgba(253,203,110,.15)">
+          ⚠ 予約には身分証（学生証など）が必要です。来場時に提示してください。
         </div>
-        ${!cfg.isOpen?`<div class="card warn" style="text-align:center"><div style="font-weight:700;color:var(--warning)">現在受付を停止しています</div><div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div></div>`:''}
-        <div class="card">
-          <div class="ticket-box">
-            <div class="ticket-label">NEXT NUMBER</div>
-            <div class="ticket-num ${!cfg.isOpen?'dim':''}">${cfg.isOpen?`No.${pad(cfg.nextNumber)}`:'--'}</div>
-            <div style="color:var(--muted);font-size:12px;margin-top:4px">${cfg.isOpen?'次の発行番号':''}</div>
+        <div class="field"><label class="field-label">氏名（本名）*</label>
+          <input class="field-input" id="inp-name" type="text" placeholder="例: 山田 太郎" value="${reserveDraft.name}" autocomplete="name"></div>
+        <div class="field"><label class="field-label">年齢 *</label>
+          <input class="field-input" id="inp-reserve-age" type="number" placeholder="例: 17" min="0" max="120" value="${reserveDraft.age}" inputmode="numeric"></div>
+        <div class="field"><label class="field-label">人数 *</label>
+          <input class="field-input" id="inp-reserve-people" type="number" placeholder="1" min="1" max="20" value="${reserveDraft.people}" inputmode="numeric"></div>
+        <div class="field" style="margin-bottom:0"><label class="field-label">持参する身分証 *</label>
+          <select class="field-input" id="inp-idtype">
+            <option value="">選択してください</option>
+            ${ID_TYPES.map(t=>`<option value="${t}" ${reserveDraft.idType===t?'selected':''}>${t}</option>`).join('')}
+          </select></div>
+      </div>
+      <button class="btn btn-primary" id="btn-submit-reserve">予約を確定する</button>
+      <button class="btn btn-ghost" id="btn-back-slots" style="margin-top:10px">← 時間枠を選び直す</button>
+    </div>`;
+  }
+
+  function renderReservationView(){
+    const r=myReservation;
+    const isArrived=r.status==='arrived';
+    const usedStamp=`<svg class="stamp-svg used" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs><path id="ra1" d="M 8,50 A 42,42 0 0,1 92,50"/><path id="ra2" d="M 92,50 A 42,42 0 0,1 8,50"/></defs>
+      <circle cx="50" cy="50" r="46" stroke="#c85010" stroke-width="3" fill="none"/>
+      <circle cx="50" cy="50" r="39" stroke="#c85010" stroke-width="1.5" fill="none"/>
+      <text font-size="10" fill="#c85010" font-weight="900" letter-spacing="3"><textPath href="#ra1" startOffset="7%">THANK YOU</textPath></text>
+      <text font-size="8" fill="#c85010" letter-spacing="3"><textPath href="#ra2" startOffset="8%">✦ TICKET ✦</textPath></text>
+      <text x="50" y="54" text-anchor="middle" fill="#c85010" font-size="11" font-weight="900" font-family="sans-serif">来場済み</text>
+    </svg>`;
+    const emptyStamp=`<svg class="stamp-svg empty" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="46" stroke="#ccc" stroke-width="2" stroke-dasharray="4 3" fill="none"/>
+      <circle cx="50" cy="50" r="38" stroke="#ddd" stroke-width="1" stroke-dasharray="3 2" fill="none"/>
+      <text x="50" y="46" text-anchor="middle" fill="#bbb" font-size="9" font-weight="700" font-family="sans-serif">来場</text>
+      <text x="50" y="60" text-anchor="middle" fill="#bbb" font-size="9" font-weight="700" font-family="sans-serif">確認印</text>
+    </svg>`;
+    return `<div class="page">
+      <div style="padding-top:22px;padding-bottom:8px;text-align:center">
+        <div class="badge">RESERVATION TICKET</div>
+      </div>
+      <div class="ticket-card ${r.status}">
+        <div class="tc-top">
+          <div class="tc-brand">✦ BON VOYAGE ✦ 予約チケット</div>
+          <div class="tc-number-label">予約時間帯</div>
+          <div class="tc-number" style="font-size:44px;margin:4px 0">${r.slotDate} ${r.slotTime}</div>
+          <span class="tc-status-pill" style="color:${isArrived?'#34d399':'#a78bfa'}">
+            <span class="dot" style="background:${isArrived?'#34d399':'#a78bfa'};animation:blink 1.1s ease infinite"></span>
+            ${isArrived?'✓ 来場確認済み':'予約済み'}
+          </span>
+        </div>
+        <div class="tc-perf"></div>
+        <div class="tc-bottom">
+          <div class="tc-info">
+            <div class="tc-info-row"><span class="tc-info-key">氏名</span><span class="tc-info-val">${r.name}</span></div>
+            <div class="tc-info-row"><span class="tc-info-key">人数</span><span class="tc-info-val">${r.people}名</span></div>
+            <div class="tc-info-row"><span class="tc-info-key">年齢</span><span class="tc-info-val">${r.age}歳</span></div>
+            <div class="tc-info-row"><span class="tc-info-key">身分証</span><span class="tc-info-val muted">${r.idType}</span></div>
           </div>
+          <div class="tc-stamp-area">${isArrived?usedStamp:emptyStamp}</div>
         </div>
-        <button class="btn btn-primary" id="btn-get" ${!cfg.isOpen?'disabled':''}>整理券を取る</button>
-        ${waitList.length>0?`<div class="card" style="margin-top:14px">
-          <div class="row"><span class="row-label">呼び出し中</span><span class="row-value" style="color:var(--accent2)">No.01 〜 No.${pad(maxCall)}</span></div>
-          <div class="row"><span class="row-label">待機人数</span><span class="row-value">${waitList.length}人</span></div>
-        </div>`:''}
-        <div class="center" style="margin-top:28px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
-        <div class="center" style="margin-top:8px"><a class="link" href="?mode=display" target="_blank">📺 表示ボードを開く</a></div>
-      </div>`;
-    }
+      </div>
+      ${!isArrived?`<p style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:12px;line-height:1.6">予約時間帯にカウンターへお越しの際、<br>この画面とともに身分証をスタッフにご提示ください</p>`:''}
+      ${!isArrived?`<button class="btn btn-ghost" id="btn-cancel-resv" style="font-size:13px;padding:12px;color:var(--muted)">予約をキャンセル</button>`:''}
+      ${isArrived?`<button class="btn btn-ghost" id="btn-new-resv" style="margin-top:4px">新しい予約をする</button>`:''}
+      <div class="center" style="margin-top:22px"><span class="bv-logo" onclick="handleTap()">✦ BON VOYAGE ✦</span></div>
+    </div>`;
+  }
+
+  function renderTicketView(){
+    const sn=cfg.storeName||'整理券システム';
+    if(!myTicket){return '';}
+
 
     // ── Ticket card view (waiting / called / done) ──
     const isDone=myTicket.status==='done';
     const isCalled=myTicket.status==='called';
     const isWaiting=myTicket.status==='waiting';
+    const waitList=tickets.filter(t=>t.status==='waiting');
+    const logoTap=`onclick="handleTap()"`;
     const ahead=waitList.filter(t=>t.number<myTicket.number).length;
     const dateStr=formatDate(myTicket.createdAt);
     const mpp=cfg.minutesPerPerson||3;
@@ -585,6 +832,8 @@
         <div class="tc-perf"></div>
         <div class="tc-bottom">
           <div class="tc-info">
+            ${myTicket.nickname?`<div class="tc-info-row"><span class="tc-info-key">名前</span><span class="tc-info-val">${myTicket.nickname}</span></div>`:''}
+            ${myTicket.people?`<div class="tc-info-row"><span class="tc-info-key">人数</span><span class="tc-info-val">${myTicket.people}名</span></div>`:''}
             ${cfg.location?`<div class="tc-info-row">
               <span class="tc-info-key">場所</span>
               <span class="tc-info-val${isCalled?' highlight':''}">
@@ -676,6 +925,24 @@
         <button class="btn btn-ghost" id="btn-toggle" style="margin-bottom:10px">${cfg.isOpen?'受付を停止する':'受付を再開する'}</button>
         <button class="btn" id="btn-reset" style="background:rgba(255,118,117,.08);color:var(--danger);border:1px solid rgba(255,118,117,.2)">全データをリセット</button>
       </div>
+      ${cfg.reservationEnabled?`<div class="card">
+        <div class="sec">予約リスト (${reservations.length}件)</div>
+        ${reservations.length===0?'<div class="empty-msg">予約はありません</div>':
+          Object.entries(reservations.reduce((acc,r)=>{if(!acc[r.slotId])acc[r.slotId]=[];acc[r.slotId].push(r);return acc;},{}))
+            .map(([slotId,slotResv])=>`
+              <div class="resv-slot-label">${slotResv[0].slotDate} ${slotResv[0].slotTime} の枠 (${slotResv.length}件)</div>
+              ${slotResv.map(r=>`<div class="resv-card">
+                <div class="resv-info">
+                  <div class="resv-name">${r.name} <span style="font-weight:400;font-size:12px;color:var(--muted)">${r.people}名</span></div>
+                  <div class="resv-meta">${r.idType} · ${r.age}歳 · ${r.status==='arrived'?'✓ 来場済み':'予約済み'}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:5px">
+                  ${r.status==='reserved'?`<button class="btn-icon" onclick="markArrived('${r.id}')" style="font-size:11px;padding:5px 8px;color:#34d399;border-color:rgba(52,211,153,.3)">来場✓</button>`:''}
+                  <button class="btn-icon" onclick="cancelReservationById('${r.id}')" style="font-size:11px;padding:5px 8px;color:var(--danger);border-color:rgba(255,118,117,.3)">取消</button>
+                </div>
+              </div>`).join('')}
+            `).join('')}
+      </div>`:''}
       <div class="center" style="margin-top:10px"><a class="link" href="?mode=display" target="_blank">📺 表示ボードを別タブで開く</a></div>
       <div class="center" style="margin-top:10px"><button onclick="staffLogout()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px">スタッフ画面を終了</button></div>
     </div>`;
@@ -699,6 +966,20 @@
           <div class="field"><label class="field-label">スタッフ承認コード</label><input class="field-input" name="stampPassword" type="text" inputmode="numeric" placeholder="例: 1234" value="${cfg.stampPassword||'1234'}"></div>
           <div class="field"><label class="field-label">呼び出し後の有効時間（分）</label><input class="field-input" name="expireMinutes" type="number" min="1" max="60" step="1" value="${cfg.expireMinutes||5}"><div style="font-size:11px;color:var(--muted);margin-top:4px">この時間を過ぎると自動キャンセルされます</div></div>
           <div class="field"><label class="field-label">1人あたりの目安時間（分）</label><input class="field-input" name="minutesPerPerson" type="number" min="0.5" max="30" step="0.5" value="${cfg.minutesPerPerson||3}"><div style="font-size:11px;color:var(--muted);margin-top:4px">待ち時間の予定呼び出し時刻の計算に使います</div></div>
+        </div>
+        <div class="card">
+          <div class="sec">予約システム</div>
+          <div class="field" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div>
+              <label class="field-label" style="margin-bottom:0;font-size:14px;color:var(--text)">予約を受け付ける</label>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px">ホーム画面に「予約する」ボタンを表示</div>
+            </div>
+            <input type="checkbox" name="reservationEnabled" id="inp-resv-enabled" ${cfg.reservationEnabled?'checked':''} style="width:22px;height:22px;cursor:pointer;accent-color:var(--accent);flex-shrink:0">
+          </div>
+          <div class="field" style="margin-bottom:0"><label class="field-label">1時間あたりの予約枠数</label>
+            <input class="field-input" name="slotsPerHour" type="number" min="1" max="100" value="${cfg.slotsPerHour||10}">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">1時間あたりの最大予約受付人数</div>
+          </div>
         </div>
         <div class="card">
           <div class="sec">テーマ（背景・カラー）</div>
@@ -740,14 +1021,47 @@
 
   // ── Event binding ─────────────────────────────────
   function bindCustomer(){
-    document.getElementById('btn-get')?.addEventListener('click',getTicket);
+    // Sub-view navigation
+    document.getElementById('btn-to-walkin')?.addEventListener('click',()=>{customerSubView='walkinForm';render();});
+    document.getElementById('btn-to-reserve')?.addEventListener('click',()=>{customerSubView='reserveSlots';render();});
+    document.getElementById('btn-to-reserve-form')?.addEventListener('click',()=>{customerSubView='reserveForm';render();});
+    document.getElementById('btn-back-home')?.addEventListener('click',()=>{customerSubView='home';render();});
+    document.getElementById('btn-back-slots')?.addEventListener('click',()=>{customerSubView='reserveSlots';render();});
+    // Walk-in form submit
+    document.getElementById('btn-submit-walkin')?.addEventListener('click',()=>{
+      const fd={
+        nickname:(document.getElementById('inp-nickname')?.value||'').trim(),
+        age:document.getElementById('inp-age')?.value||'',
+        people:document.getElementById('inp-people')?.value||'1'
+      };
+      if(!fd.nickname){toast('ニックネームを入力してください');return;}
+      if(!fd.age){toast('年齢を入力してください');return;}
+      getTicketWithForm(fd);
+    });
+    // Reserve form submit
+    document.getElementById('btn-submit-reserve')?.addEventListener('click',()=>{
+      const fd={
+        name:(document.getElementById('inp-name')?.value||'').trim(),
+        age:document.getElementById('inp-reserve-age')?.value||'',
+        people:document.getElementById('inp-reserve-people')?.value||'1',
+        idType:document.getElementById('inp-idtype')?.value||''
+      };
+      if(!fd.name){toast('氏名を入力してください');return;}
+      if(!fd.age){toast('年齢を入力してください');return;}
+      if(!fd.idType){toast('持参する身分証を選択してください');return;}
+      makeReservation(fd);
+    });
+    // Ticket actions
     document.getElementById('btn-cancel')?.addEventListener('click',cancelTicket);
-    document.getElementById('btn-new')?.addEventListener('click',()=>{clearMyTicket();});
+    document.getElementById('btn-new')?.addEventListener('click',()=>clearMyTicket());
     document.getElementById('btn-use')?.addEventListener('click',showUseModal);
     document.getElementById('btn-stamp')?.addEventListener('click',submitStamp);
     document.getElementById('btn-hide-modal')?.addEventListener('click',hideUseModal);
     document.getElementById('stamp-code')?.addEventListener('keydown',e=>{if(e.key==='Enter')submitStamp();});
     document.getElementById('use-modal')?.addEventListener('click',e=>{if(e.target===e.currentTarget)hideUseModal();});
+    // Reservation actions
+    document.getElementById('btn-cancel-resv')?.addEventListener('click',cancelReservation);
+    document.getElementById('btn-new-resv')?.addEventListener('click',()=>clearMyReservation());
   }
   function bindStaff(){
     document.getElementById('btn-minus')?.addEventListener('click',()=>updateCallCount(-1));
