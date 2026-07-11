@@ -231,6 +231,14 @@
   <div class="bg-glow"></div>
   <div id="root"><div class="loader"><div class="spin"></div></div></div>
   <div class="toast" id="toast"></div>
+  <div id="generic-modal" class="modal-overlay" style="display:none">
+    <div class="modal-card">
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-sub" id="modal-body"></div>
+      <button class="btn" id="modal-ok">確認</button>
+      <button class="btn btn-ghost" id="modal-cancel" style="margin-top:10px">キャンセル</button>
+    </div>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -283,6 +291,7 @@
   let cfg=null, myTicket=null, tickets=[], isStaff=false;
   let reservations=[], myReservation=null;
   let staffTickets=[], staffTicketsUnsub=null;
+  let modalCallback=null;
   let customerSubView='home'; // home | walkinForm | reserveSlots | reserveForm
   let selectedSlot=null;
   let formDraft={nickname:'',age:'',people:'1'};
@@ -415,9 +424,15 @@
 
   async function cancelReservation(){
     if(!myReservation)return;
-    if(!confirm('予約をキャンセルしますか？'))return;
-    await db.collection('reservations').doc(myReservation.id).update({status:'cancelled'});
-    clearMyReservation();toast('予約をキャンセルしました');
+    showConfirm(
+      '予約をキャンセル',
+      `<strong>${myReservation.slotDate} ${myReservation.slotTime}〜</strong> の予約をキャンセルしますか？`,
+      'キャンセルする',
+      async()=>{
+        await db.collection('reservations').doc(myReservation.id).update({status:'cancelled'});
+        clearMyReservation();toast('予約をキャンセルしました');
+      },true
+    );
   }
 
   async function makeReservation(fd){
@@ -447,9 +462,16 @@
     toast('来場確認しました');
   }
   async function cancelReservationById(id){
-    if(!confirm('この予約をキャンセルしますか？'))return;
-    await db.collection('reservations').doc(id).update({status:'cancelled'});
-    toast('予約をキャンセルしました');
+    const r=reservations.find(r=>r.id===id);
+    showConfirm(
+      '予約をキャンセル',
+      r?`<strong>${r.name}</strong>さん (${r.slotDate} ${r.slotTime}〜) の予約をキャンセルしますか？`:'この予約をキャンセルしますか？',
+      'キャンセルする',
+      async()=>{
+        await db.collection('reservations').doc(id).update({status:'cancelled'});
+        toast('予約をキャンセルしました');
+      },true
+    );
   }
 
   function selectSlot(id,time,date,available){
@@ -482,12 +504,17 @@
 
   async function cancelTicket() {
     if(!myTicket)return;
-    const msg=myTicket.status==='called'
-      ?'呼び出し中ですが、本当にキャンセルしますか？'
-      :'整理券をキャンセルしますか？';
-    if(!confirm(msg))return;
-    await db.collection('tickets').doc(myTicket.id).update({status:'cancelled'});
-    clearMyTicket();toast('整理券をキャンセルしました');
+    showConfirm(
+      '整理券をキャンセル',
+      myTicket.status==='called'
+        ?'呼び出し中ですが、本当にキャンセルしますか？'
+        :'整理券をキャンセルしますか？',
+      'キャンセルする',
+      async()=>{
+        await db.collection('tickets').doc(myTicket.id).update({status:'cancelled'});
+        clearMyTicket();toast('整理券をキャンセルしました');
+      },true
+    );
   }
 
   async function submitStamp() {
@@ -531,25 +558,38 @@
 
   async function toggleOpen(){
     if(!cfg)return;
-    if(cfg.isOpen&&!confirm('受付を停止しますか？\n新しい整理券が取れなくなります。'))return;
-    await cfgRef.update({isOpen:!cfg.isOpen});
-    toast(cfg.isOpen?'受付を停止しました':'受付を再開しました');
+    if(cfg.isOpen){
+      showConfirm('受付を停止しますか？','新しい整理券が取れなくなります。','停止する',
+        async()=>{await cfgRef.update({isOpen:false});toast('受付を停止しました');},true);
+    } else {
+      await cfgRef.update({isOpen:true});toast('受付を再開しました');
+    }
   }
 
   async function resetAll(){
-    if(!confirm('⚠ 全データをリセットしますか？\n\n整理券・予約が全て削除されます。\nこの操作は絶対に取り消せません。'))return;
-    if(!confirm('本当によろしいですか？\n再度確認します。'))return;
-    const [tSnap,rSnap]=await Promise.all([
-      db.collection('tickets').get(),
-      db.collection('reservations').get()
-    ]);
-    const batch=db.batch();
-    tSnap.docs.forEach(d=>batch.delete(d.ref));
-    rSnap.docs.forEach(d=>batch.delete(d.ref));
-    await batch.commit();
-    await cfgRef.update({nextNumber:1,maxCallCount:30});
-    staffTickets=[];
-    toast('全データをリセットしました');
+    showConfirm(
+      '⚠ 全データをリセット',
+      '整理券・予約が全て削除されます。<br>この操作は取り消せません。',
+      '次へ →',
+      ()=>showConfirm(
+        '本当によろしいですか？',
+        '<strong>全データが完全に削除されます。</strong><br>絶対に取り消せません。',
+        '完全に削除する',
+        async()=>{
+          const [tSnap,rSnap]=await Promise.all([
+            db.collection('tickets').get(),
+            db.collection('reservations').get()
+          ]);
+          const batch=db.batch();
+          tSnap.docs.forEach(d=>batch.delete(d.ref));
+          rSnap.docs.forEach(d=>batch.delete(d.ref));
+          await batch.commit();
+          await cfgRef.update({nextNumber:1,maxCallCount:30});
+          staffTickets=[];
+          toast('全データをリセットしました');
+        },true
+      ),true
+    );
   }
 
   async function saveSettings(f){
@@ -583,29 +623,47 @@
   async function callTicketById(id){
     const t=staffTickets.find(t=>t.id===id);
     if(!t)return;
-    if(!confirm(`No.${pad(t.number)} ${t.nickname?`(${t.nickname})`:''} を呼び出しますか？`))return;
-    await db.collection('tickets').doc(id).update({
-      status:'called',calledAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
-    toast(`No.${pad(t.number)} を呼び出しました`);
+    showConfirm(
+      `No.${pad(t.number)} を呼び出す`,
+      `<strong>${t.nickname||'--'}</strong>さん (${t.people||1}名 · ${t.age||'--'}歳) を呼び出しますか？`,
+      '呼び出す',
+      async()=>{
+        await db.collection('tickets').doc(id).update({
+          status:'called',calledAt:firebase.firestore.FieldValue.serverTimestamp()
+        });
+        toast(`No.${pad(t.number)} を呼び出しました`);
+      }
+    );
   }
 
   async function doneTicketById(id){
     const t=staffTickets.find(t=>t.id===id);
     if(!t)return;
-    if(!confirm(`No.${pad(t.number)} ${t.nickname?`(${t.nickname})`:''} を使用済みにしますか？`))return;
-    await db.collection('tickets').doc(id).update({
-      status:'done',doneAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
-    toast(`No.${pad(t.number)} を使用済みにしました`);
+    showConfirm(
+      `No.${pad(t.number)} を使用済みにする`,
+      `<strong>${t.nickname||'--'}</strong>さんを使用済みにします`,
+      '使用済みにする',
+      async()=>{
+        await db.collection('tickets').doc(id).update({
+          status:'done',doneAt:firebase.firestore.FieldValue.serverTimestamp()
+        });
+        toast(`No.${pad(t.number)} を使用済みにしました`);
+      }
+    );
   }
 
   async function cancelTicketById(id){
     const t=staffTickets.find(t=>t.id===id);
     if(!t)return;
-    if(!confirm(`No.${pad(t.number)} ${t.nickname?`(${t.nickname})`:''} をキャンセルしますか？`))return;
-    await db.collection('tickets').doc(id).update({status:'cancelled'});
-    toast(`No.${pad(t.number)} をキャンセルしました`);
+    showConfirm(
+      `No.${pad(t.number)} をキャンセル`,
+      `<strong>${t.nickname||'--'}</strong>さんの整理券をキャンセルします`,
+      'キャンセルする',
+      async()=>{
+        await db.collection('tickets').doc(id).update({status:'cancelled'});
+        toast(`No.${pad(t.number)} をキャンセルしました`);
+      },true
+    );
   }
 
   function staffLogout(){
@@ -636,6 +694,26 @@
   function hideUseModal(){
     const m=document.getElementById('use-modal');
     if(m)m.style.display='none';
+  }
+
+  function showConfirm(title, bodyHtml, okLabel, onOk, isDanger=false){
+    modalCallback=onOk;
+    document.getElementById('modal-title').textContent=title;
+    document.getElementById('modal-body').innerHTML=bodyHtml;
+    const btn=document.getElementById('modal-ok');
+    btn.textContent=okLabel;
+    if(isDanger){
+      btn.className='btn';
+      btn.style='background:rgba(255,118,117,.12);color:var(--danger);border:1px solid rgba(255,118,117,.3);margin-top:0';
+    } else {
+      btn.className='btn btn-primary';
+      btn.style='margin-top:0';
+    }
+    document.getElementById('generic-modal').style.display='flex';
+  }
+  function hideConfirm(){
+    document.getElementById('generic-modal').style.display='none';
+    modalCallback=null;
   }
 
   function startExpireTimer(){
@@ -702,7 +780,9 @@
   function renderCustomerHome(){
     const sn=cfg.storeName||'整理券システム';
     const waitList=tickets.filter(t=>t.status==='waiting');
-    const maxCall=cfg.maxCallCount||30;
+    const waitCount=waitList.length;
+    const mpp=cfg.minutesPerPerson||3;
+    const estMin=Math.round(waitCount*mpp);
     const logoTap=`onclick="handleTap()"`;
     return `<div class="page">
       <div class="header">
@@ -711,21 +791,19 @@
         ${cfg.slogan?`<p class="store-sub">${cfg.slogan}</p>`:''}
         ${cfg.location?`<p class="store-loc">📍 ${cfg.location}</p>`:''}
       </div>
-      ${!cfg.isOpen?`<div class="card warn" style="text-align:center"><div style="font-weight:700;color:var(--warning)">現在受付を停止しています</div><div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div></div>`:''}
-      <div class="card">
-        <div class="ticket-box">
-          <div class="ticket-label">NEXT NUMBER</div>
-          <div class="ticket-num ${!cfg.isOpen?'dim':''}">${cfg.isOpen?`No.${pad(cfg.nextNumber)}`:'--'}</div>
-          <div style="color:var(--muted);font-size:12px;margin-top:4px">${cfg.isOpen?'次の発行番号':''}</div>
+      ${!cfg.isOpen?`<div class="card warn" style="text-align:center;margin-bottom:14px"><div style="font-weight:700;color:var(--warning)">現在受付を停止しています</div><div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div></div>`:''}
+      <div class="card" style="text-align:center;padding:28px 20px 22px">
+        <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">あなたの前に</div>
+        <div style="font-size:100px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 28px rgba(var(--glow),.4))">${waitCount}</div>
+        <div style="font-size:20px;font-weight:700;color:var(--text);margin-top:4px">${waitCount===0?'人も待っていません！':'人が待っています'}</div>
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border)">
+          <div style="font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:6px">ただいまの目安時間</div>
+          <div style="font-size:${waitCount===0?'22':'34'}px;font-weight:900;color:var(--accent3)">${waitCount===0?'すぐにご案内できます':`約 ${estMin} 分`}</div>
         </div>
       </div>
-      <button class="btn btn-primary" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''}>整理券を取る（当日券）</button>
+      <button class="btn btn-primary" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="margin-top:16px">整理券を取る</button>
       ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
-      ${waitList.length>0?`<div class="card" style="margin-top:14px">
-        <div class="row"><span class="row-label">現在の待機人数</span><span class="row-value">${waitList.length}人</span></div>
-        ${cfg.minutesPerPerson?`<div class="row"><span class="row-label">目安の待ち時間</span><span class="row-value" style="color:var(--accent3)">約${Math.round(waitList.length*(cfg.minutesPerPerson||3))}分</span></div>`:''}
-      </div>`:''}
-      <div class="center" style="margin-top:28px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
+      <div class="center" style="margin-top:30px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
       <div class="center" style="margin-top:8px"><a class="link" href="?mode=display" target="_blank">📺 表示ボードを開く</a></div>
     </div>`;
   }
@@ -1130,7 +1208,7 @@
     document.getElementById('btn-to-reserve-form')?.addEventListener('click',()=>{customerSubView='reserveForm';render();});
     document.getElementById('btn-back-home')?.addEventListener('click',()=>{customerSubView='home';render();});
     document.getElementById('btn-back-slots')?.addEventListener('click',()=>{customerSubView='reserveSlots';render();});
-    // Walk-in form submit
+    // Walk-in form submit → in-app confirmation
     document.getElementById('btn-submit-walkin')?.addEventListener('click',()=>{
       const fd={
         nickname:(document.getElementById('inp-nickname')?.value||'').trim(),
@@ -1139,9 +1217,18 @@
       };
       if(!fd.nickname){toast('ニックネームを入力してください');return;}
       if(!fd.age){toast('年齢を入力してください');return;}
-      getTicketWithForm(fd);
+      showConfirm(
+        '整理券を取得しますか？',
+        `<div style="background:rgba(255,255,255,.04);border-radius:12px;padding:12px 14px;margin-bottom:10px">
+          <div style="font-size:15px;font-weight:700;margin-bottom:4px">${fd.nickname}</div>
+          <div style="font-size:13px;color:var(--muted)">${fd.age}歳 · ${fd.people}名</div>
+        </div>
+        <div style="font-size:12px;color:var(--muted)">取得後もキャンセルできます</div>`,
+        '取得する',
+        ()=>getTicketWithForm(fd)
+      );
     });
-    // Reserve form submit
+    // Reserve form submit → in-app confirmation
     document.getElementById('btn-submit-reserve')?.addEventListener('click',()=>{
       const fd={
         name:(document.getElementById('inp-name')?.value||'').trim(),
@@ -1152,7 +1239,18 @@
       if(!fd.name){toast('氏名を入力してください');return;}
       if(!fd.age){toast('年齢を入力してください');return;}
       if(!fd.idType){toast('持参する身分証を選択してください');return;}
-      makeReservation(fd);
+      const timeEnd=selectedSlot?pad(parseInt(selectedSlot.time.split(':')[0])+1)+':00':'';
+      showConfirm(
+        '予約を確定しますか？',
+        `<div style="background:rgba(255,255,255,.04);border-radius:12px;padding:12px 14px;margin-bottom:10px">
+          <div style="font-size:12px;color:var(--accent);font-weight:700;margin-bottom:6px">${selectedSlot?.date} ${selectedSlot?.time} 〜 ${timeEnd}</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:4px">${fd.name}</div>
+          <div style="font-size:13px;color:var(--muted)">${fd.age}歳 · ${fd.people}名 · ${fd.idType}</div>
+        </div>
+        <div style="font-size:12px;color:var(--warning)">⚠ 来場時に身分証の提示が必要です</div>`,
+        '予約を確定する',
+        ()=>makeReservation(fd)
+      );
     });
     // Ticket actions
     document.getElementById('btn-cancel')?.addEventListener('click',cancelTicket);
@@ -1183,6 +1281,9 @@
     });
   }
 // ── Start ─────────────────────────────────────────
+  document.getElementById('modal-ok').addEventListener('click',()=>{const cb=modalCallback;hideConfirm();cb?.();});
+  document.getElementById('modal-cancel').addEventListener('click',hideConfirm);
+  document.getElementById('generic-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)hideConfirm();});
   startListeners();
   </script>
 </body>
