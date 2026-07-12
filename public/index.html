@@ -16,7 +16,7 @@
     :root {
       --bg:#08080f; --surface:rgba(255,255,255,.04); --surface2:rgba(255,255,255,.07);
       --border:rgba(255,255,255,.09); --accent:#7c6cf0; --accent2:#fd79a8;
-      --accent3:#55efc4; --warning:#fdcb6e; --danger:#ff9f43;
+      --accent3:#55efc4; --warning:#fdcb6e; --danger:#9498c4;
       --text:#eeeef8; --muted:#6666aa; --glow:124,108,240;
     }
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -141,7 +141,7 @@
     /* Open pill */
     .open-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:100px;font-size:12px;font-weight:700}
     .open-pill.open{background:rgba(85,239,196,.1);color:var(--accent3)}
-    .open-pill.closed{background:rgba(255,159,67,.1);color:var(--danger)}
+    .open-pill.closed{background:rgba(148,158,196,.1);color:var(--danger)}
 
     /* Section title */
     .sec{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
@@ -715,7 +715,7 @@
     btn.textContent=okLabel;
     if(isDanger){
       btn.className='btn';
-      btn.style='background:rgba(255,159,67,.12);color:var(--danger);border:1px solid rgba(255,159,67,.3);margin-top:0';
+      btn.style='background:rgba(148,158,196,.12);color:var(--danger);border:1px solid rgba(148,158,196,.3);margin-top:0';
     } else {
       btn.className='btn btn-primary';
       btn.style='margin-top:0';
@@ -803,21 +803,15 @@
         ${cfg.location?`<p class="store-loc">📍 ${cfg.location}</p>`:''}
       </div>
       ${!cfg.isOpen?`<div class="card warn" style="text-align:center;margin-bottom:14px"><div style="font-weight:700;color:var(--warning)">現在受付を停止しています</div><div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div></div>`:''}
-      ${waitCount===0?`
-      <div class="card" style="text-align:center;padding:32px 20px 26px">
-        <div style="font-size:52px;line-height:1;margin-bottom:12px">✅</div>
-        <div style="font-size:24px;font-weight:900;color:var(--accent3);margin-bottom:6px">今なら待ち時間ゼロ！</div>
-        <div style="font-size:14px;color:var(--muted)">並ばずにすぐご案内できます</div>
-      </div>`:`
       <div class="card" style="text-align:center;padding:28px 20px 22px">
-        <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">あなたの前に</div>
-        <div style="font-size:100px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 28px rgba(var(--glow),.4))">${waitCount}</div>
-        <div style="font-size:20px;font-weight:700;color:var(--text);margin-top:4px">人が待っています</div>
-        <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border)">
-          <div style="font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:6px">ただいまの目安時間</div>
-          <div style="font-size:34px;font-weight:900;color:var(--accent3)">約 ${estMin} 分</div>
+        <div style="font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:6px">現在の待ち人数</div>
+        <div style="font-size:80px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 28px rgba(var(--glow),.4))">${waitCount}</div>
+        <div style="font-size:16px;font-weight:700;color:var(--text);margin-top:2px">人</div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+          <div style="font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:6px">おおよその時間</div>
+          <div style="font-size:30px;font-weight:900;color:var(--accent3)">${waitCount===0?'すぐにご案内':`約 ${estMin} 分`}</div>
         </div>
-      </div>`}
+      </div>
       <button class="btn btn-primary" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="margin-top:16px">整理券を取る</button>
       ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
       <div class="center" style="margin-top:30px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
@@ -1104,7 +1098,7 @@
                 <div style="display:flex;flex-direction:column;gap:4px;margin-left:4px">
                   ${t.status==='waiting'?`<button class="btn-icon" onclick="callTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--accent2);border-color:rgba(var(--glow),.3)">呼出</button>`:''}
                   ${t.status==='called'?`<button class="btn-icon" onclick="doneTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--accent3);border-color:rgba(85,239,196,.3)">完了</button>`:''}
-                  ${(t.status==='waiting'||t.status==='called')?`<button class="btn-icon" onclick="cancelTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--danger);border-color:rgba(255,159,67,.3)">取消</button>`:''}
+                  ${(t.status==='waiting'||t.status==='called')?`<button class="btn-icon" onclick="cancelTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--danger);border-color:rgba(148,158,196,.3)">取消</button>`:''}
                 </div>
               </div>`;
             }).join('')}
@@ -1113,7 +1107,7 @@
       <div class="card">
         <div class="sec">操作</div>
         <button class="btn btn-ghost" id="btn-toggle" style="margin-bottom:10px">${cfg.isOpen?'受付を停止する':'受付を再開する'}</button>
-        <button class="btn" id="btn-reset" style="background:rgba(255,159,67,.08);color:var(--danger);border:1px solid rgba(255,159,67,.2)">全データをリセット</button>
+        <button class="btn" id="btn-reset" style="background:rgba(148,158,196,.08);color:var(--danger);border:1px solid rgba(148,158,196,.2)">全データをリセット</button>
       </div>
       ${cfg.reservationEnabled?`<div class="card">
         <div class="sec">予約リスト (${reservations.length}件)</div>
@@ -1128,7 +1122,7 @@
                 </div>
                 <div style="display:flex;flex-direction:column;gap:5px">
                   ${r.status==='reserved'?`<button class="btn-icon" onclick="markArrived('${r.id}')" style="font-size:11px;padding:5px 8px;color:#34d399;border-color:rgba(52,211,153,.3)">来場✓</button>`:''}
-                  <button class="btn-icon" onclick="cancelReservationById('${r.id}')" style="font-size:11px;padding:5px 8px;color:var(--danger);border-color:rgba(255,159,67,.3)">取消</button>
+                  <button class="btn-icon" onclick="cancelReservationById('${r.id}')" style="font-size:11px;padding:5px 8px;color:var(--danger);border-color:rgba(148,158,196,.3)">取消</button>
                 </div>
               </div>`).join('')}
             `).join('')}
