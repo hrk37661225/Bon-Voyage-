@@ -333,7 +333,8 @@
         await cfgRef.set({isOpen:true,nextNumber:1,maxCallCount:30,
           storeName:'Bon Voyage',slogan:'旅へ出よう',location:'中庭',theme:0,
           stampPassword:'1234',expireMinutes:5,minutesPerPerson:3,
-          reservationEnabled:false,slotsPerHour:10,openHour:10,closeHour:16});
+          reservationEnabled:false,slotsPerHour:10,openHour:10,closeHour:16,
+          autoCallEnabled:true});
       } else { applyTheme(s.data().theme||0); }
     } catch(e){}
   }
@@ -392,7 +393,8 @@
     try {
       const num=cfg.nextNumber;
       const maxCall=cfg.maxCallCount||30;
-      const status=num<=maxCall?'called':'waiting';
+      const autoCall=cfg.autoCallEnabled!==false;
+      const status=(autoCall&&num<=maxCall)?'called':'waiting';
       const ref=await db.collection('tickets').add({
         number:num,status,sid,type:'walkin',
         nickname:fd.nickname,age:parseInt(fd.age)||0,people:parseInt(fd.people)||1,
@@ -543,7 +545,7 @@
     if(!cfg)return;
     const old=cfg.maxCallCount||30;
     const next=Math.max(1,old+delta);
-    if(next>old) {
+    if(next>old && cfg.autoCallEnabled!==false) {
       // staffTickets includes all statuses; falls back to tickets if staff listener not started
       const pool=staffTickets.length>0?staffTickets:tickets;
       const toCall=pool.filter(t=>t.status==='waiting'&&t.number>old&&t.number<=next);
@@ -605,6 +607,7 @@
       stampPassword:f.stampPassword.value||'1234',
       expireMinutes:parseInt(f.expireMinutes.value)||5,
       minutesPerPerson:parseFloat(f.minutesPerPerson.value)||3,
+      autoCallEnabled:document.getElementById('inp-autocall-enabled')?.checked!==false,
       reservationEnabled:document.getElementById('inp-resv-enabled')?.checked||false,
       openHour:parseInt(f.openHour.value)??10,
       closeHour:parseInt(f.closeHour.value)??16,
@@ -1139,12 +1142,15 @@
           <div class="sec">店舗情報</div>
           <div class="field"><label class="field-label">店名</label><input class="field-input" name="storeName" value="${cfg.storeName||''}" placeholder="例: Bon Voyage"></div>
           <div class="field"><label class="field-label">スローガン</label><input class="field-input" name="slogan" value="${cfg.slogan||''}" placeholder="例: 旅へ出よう"></div>
-          <div class="field"><label class="field-label">売り場の場所</label>
-            <select class="field-input" name="location">
-              ${LOCATIONS.map(l=>`<option value="${l}" ${cfg.location===l?'selected':''}>${l}</option>`).join('')}
-            </select>
-          </div>
+          <div class="field"><label class="field-label">売り場の場所</label><input class="field-input" name="location" value="${cfg.location||''}" placeholder="例: 中庭、A棟前など"></div>
           <div class="field"><label class="field-label">呼び出し人数（初期値）</label><input class="field-input" name="maxCallCount" type="number" min="1" max="999" value="${cfg.maxCallCount||30}"></div>
+          <div class="field" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0">
+            <div>
+              <label class="field-label" style="margin-bottom:0;font-size:14px;color:var(--text)">自動呼び出しを有効にする</label>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px">オフにすると手動で「呼出」ボタンを押すまで呼び出されません</div>
+            </div>
+            <input type="checkbox" id="inp-autocall-enabled" ${cfg.autoCallEnabled!==false?'checked':''} style="width:22px;height:22px;cursor:pointer;accent-color:var(--accent);flex-shrink:0">
+          </div>
           <div class="field"><label class="field-label">スタッフ承認コード</label><input class="field-input" name="stampPassword" type="text" inputmode="numeric" placeholder="例: 1234" value="${cfg.stampPassword||'1234'}"></div>
           <div class="field"><label class="field-label">呼び出し後の有効時間（分）</label><input class="field-input" name="expireMinutes" type="number" min="1" max="60" step="1" value="${cfg.expireMinutes||5}"><div style="font-size:11px;color:var(--muted);margin-top:4px">この時間を過ぎると自動キャンセルされます</div></div>
           <div class="field"><label class="field-label">1人あたりの目安時間（分）</label><input class="field-input" name="minutesPerPerson" type="number" min="0.5" max="30" step="0.5" value="${cfg.minutesPerPerson||3}"><div style="font-size:11px;color:var(--muted);margin-top:4px">待ち時間の予定呼び出し時刻の計算に使います</div></div>
