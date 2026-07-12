@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>整理券</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg:#08080f; --surface:rgba(255,255,255,.04); --surface2:rgba(255,255,255,.07);
@@ -12,7 +15,7 @@
       --text:#eeeef8; --muted:#6666aa; --glow:124,108,240;
     }
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    body{font-family:-apple-system,'Hiragino Kaku Gothic ProN','Yu Gothic UI',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;transition:background .4s}
+    body{font-family:'Noto Sans JP',-apple-system,'Hiragino Kaku Gothic ProN',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;transition:background .4s}
     .bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;
       background:radial-gradient(ellipse 70% 90% at 15% 40%,rgba(var(--glow),.14) 0%,transparent 60%),
                 radial-gradient(ellipse 55% 65% at 88% 18%,rgba(var(--glow),.08) 0%,transparent 60%),
@@ -792,15 +795,21 @@
         ${cfg.location?`<p class="store-loc">📍 ${cfg.location}</p>`:''}
       </div>
       ${!cfg.isOpen?`<div class="card warn" style="text-align:center;margin-bottom:14px"><div style="font-weight:700;color:var(--warning)">現在受付を停止しています</div><div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div></div>`:''}
+      ${waitCount===0?`
+      <div class="card" style="text-align:center;padding:32px 20px 26px">
+        <div style="font-size:52px;line-height:1;margin-bottom:12px">✅</div>
+        <div style="font-size:24px;font-weight:900;color:var(--accent3);margin-bottom:6px">ただいま空いています</div>
+        <div style="font-size:14px;color:var(--muted)">お待ちの方はいません · すぐにご案内できます</div>
+      </div>`:`
       <div class="card" style="text-align:center;padding:28px 20px 22px">
         <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">あなたの前に</div>
         <div style="font-size:100px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 28px rgba(var(--glow),.4))">${waitCount}</div>
-        <div style="font-size:20px;font-weight:700;color:var(--text);margin-top:4px">${waitCount===0?'人も待っていません！':'人が待っています'}</div>
+        <div style="font-size:20px;font-weight:700;color:var(--text);margin-top:4px">人が待っています</div>
         <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border)">
           <div style="font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:6px">ただいまの目安時間</div>
-          <div style="font-size:${waitCount===0?'22':'34'}px;font-weight:900;color:var(--accent3)">${waitCount===0?'すぐにご案内できます':`約 ${estMin} 分`}</div>
+          <div style="font-size:34px;font-weight:900;color:var(--accent3)">約 ${estMin} 分</div>
         </div>
-      </div>
+      </div>`}
       <button class="btn btn-primary" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="margin-top:16px">整理券を取る</button>
       ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
       <div class="center" style="margin-top:30px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
