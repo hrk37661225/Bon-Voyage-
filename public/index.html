@@ -11,33 +11,45 @@
   <meta name="theme-color" content="#0d3a63">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Outfit:wght@600;700;800;900&family=Shippori+Mincho:wght@700;800&family=Playfair+Display:ital,wght@1,700;1,800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:#08080f; --surface:rgba(255,255,255,.04); --surface2:rgba(255,255,255,.07);
-      --border:rgba(255,255,255,.09); --accent:#7c6cf0; --accent2:#fd79a8;
-      --accent3:#55efc4; --warning:#fdcb6e; --danger:#9498c4;
-      --text:#eeeef8; --muted:#6666aa; --glow:124,108,240;
+      --bg:#160402; --surface:rgba(20,60,110,.08); --surface2:rgba(20,60,110,.14);
+      --border:rgba(20,60,110,.22); --accent:#5fd0ff; --accent2:#f4c95d;
+      --accent3:#4ade80; --warning:#fdcb6e; --danger:#9498c4;
+      --text:#eeeef8; --muted:#b8a89a; --glow:20,60,110;
       --font-head:'Zen Kaku Gothic New','Noto Sans JP',-apple-system,sans-serif;
       --font-num:'Outfit','Noto Sans JP',sans-serif;
+      --font-serif:'Shippori Mincho','Noto Sans JP',serif;
+      --font-script:'Playfair Display',serif;
+      --navy:#0a1f38; --navy2:#0d2a4a; --gold:#f4c95d; --gold2:#c9932e; --cyan:#5fd0ff;
     }
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    body{font-family:'Noto Sans JP',-apple-system,'Hiragino Kaku Gothic ProN',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;transition:background .4s}
+    body{font-family:'Noto Sans JP',-apple-system,'Hiragino Kaku Gothic ProN',sans-serif;background:radial-gradient(ellipse 140% 90% at 50% 115%,#ff7a1a 0%,#c8420f 28%,#4a1206 58%,#160402 100%);color:var(--text);min-height:100dvh;transition:background .4s}
     .bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;
-      background:radial-gradient(ellipse 70% 90% at 15% 40%,rgba(var(--glow),.14) 0%,transparent 60%),
-                radial-gradient(ellipse 55% 65% at 88% 18%,rgba(var(--glow),.08) 0%,transparent 60%),
-                radial-gradient(ellipse 45% 55% at 50% 88%,rgba(var(--glow),.06) 0%,transparent 60%);
-      animation:bgBreath 7s ease-in-out infinite alternate}
-    @keyframes bgBreath{from{opacity:.7}to{opacity:1}}
+      background:
+        radial-gradient(1.5px 1.5px at 12% 22%,rgba(255,255,255,.9),transparent),
+        radial-gradient(1px 1px at 28% 68%,rgba(255,255,255,.7),transparent),
+        radial-gradient(2px 2px at 42% 15%,rgba(255,255,255,.8),transparent),
+        radial-gradient(1px 1px at 58% 42%,rgba(255,255,255,.6),transparent),
+        radial-gradient(1.5px 1.5px at 72% 78%,rgba(255,255,255,.85),transparent),
+        radial-gradient(1px 1px at 85% 30%,rgba(255,255,255,.7),transparent),
+        radial-gradient(2px 2px at 91% 60%,rgba(255,255,255,.75),transparent),
+        radial-gradient(1px 1px at 18% 85%,rgba(255,255,255,.6),transparent),
+        radial-gradient(1.5px 1.5px at 65% 90%,rgba(255,255,255,.7),transparent),
+        radial-gradient(1px 1px at 8% 50%,rgba(255,255,255,.5),transparent);
+      animation:bgBreath 4s ease-in-out infinite alternate}
+    @keyframes bgBreath{from{opacity:.5}to{opacity:1}}
     #root{position:relative;z-index:1;min-height:100dvh}
 
     /* Layout */
     .page{max-width:440px;margin:0 auto;padding:16px 18px 52px}
-    .header{text-align:center;padding:40px 0 26px}
+    .header{text-align:center;padding:34px 0 26px}
+    .header-anchor{font-size:20px;color:rgba(255,255,255,.55);margin-bottom:10px}
     .badge{display:inline-block;font-family:var(--font-num);font-size:10px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:var(--accent);border:1px solid rgba(var(--glow),.3);border-radius:100px;padding:4px 14px;margin-bottom:12px}
-    .header h1{font-family:var(--font-head);font-size:25px;font-weight:900;letter-spacing:.3px;background:linear-gradient(135deg,#fff 30%,rgba(255,255,255,.5));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-    .store-sub{color:var(--muted);font-size:13px;margin-top:4px}
-    .store-loc{color:var(--accent3);font-size:12px;margin-top:3px}
+    .header h1{font-family:var(--font-serif);font-size:32px;font-weight:800;letter-spacing:.5px;color:#fff;text-shadow:0 2px 18px rgba(0,0,0,.35)}
+    .store-sub{color:rgba(255,255,255,.65);font-size:13px;margin-top:6px}
+    .store-loc{color:var(--gold);font-size:13px;margin-top:6px;font-weight:700}
 
     /* Cards */
     .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:22px;margin-bottom:14px;backdrop-filter:blur(12px)}
@@ -76,7 +88,7 @@
     .btn{width:100%;padding:16px;border-radius:14px;border:none;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .16s ease;letter-spacing:.4px}
     .btn+.btn{margin-top:10px}
     .btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
-    .btn-primary{background:linear-gradient(135deg,var(--accent),#a855f7);color:#fff;box-shadow:0 4px 20px rgba(var(--glow),.35)}
+    .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 4px 20px rgba(var(--glow),.35)}
     .btn-primary:not(:disabled):active{transform:scale(.97)}
     .btn-success{background:linear-gradient(135deg,#55efc4,#00b894);color:#0a2d22;box-shadow:0 4px 20px rgba(85,239,196,.25)}
     .btn-success:not(:disabled):active{transform:scale(.97)}
@@ -256,6 +268,7 @@
   <script>
   // ── Themes ────────────────────────────────────────
   const THEMES = [
+    {name:'サンライズ',bg:'radial-gradient(ellipse 140% 90% at 50% 115%,#ff7a1a 0%,#c8420f 28%,#4a1206 58%,#160402 100%)',a1:'#5fd0ff',a2:'#f4c95d',a3:'#4ade80',glow:'20,60,110'},
     {name:'ナイト',    bg:'#08080f',a1:'#7c6cf0',a2:'#fd79a8',a3:'#55efc4',glow:'124,108,240'},
     {name:'オーシャン',bg:'#030d1a',a1:'#00b4d8',a2:'#90e0ef',a3:'#48cae4',glow:'0,180,216'},
     {name:'フォレスト',bg:'#071a07',a1:'#52b788',a2:'#95d5b2',a3:'#d8f3dc',glow:'82,183,136'},
@@ -806,23 +819,30 @@
     const colA=`hsl(${Math.max(hue,50)} 90% 68%)`, colB=`hsl(${Math.min(hue+16,215)} 90% 58%)`;
     return `<div class="page">
       <div class="header">
-        <div class="badge">BON VOYAGE</div>
+        <div class="header-anchor">⚓</div>
         <h1>${sn}</h1>
         ${cfg.slogan?`<p class="store-sub">${cfg.slogan}</p>`:''}
         ${cfg.location?`<p class="store-loc">📍 ${cfg.location}</p>`:''}
       </div>
       ${!cfg.isOpen?`<div class="card warn" style="text-align:center;margin-bottom:14px"><div style="font-weight:700;color:var(--warning)">現在受付を停止しています</div><div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div></div>`:''}
-      <div class="card" style="text-align:center;padding:28px 20px 22px">
-        <div style="font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:6px">現在の待ち人数</div>
-        <div style="font-family:var(--font-num);font-size:80px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,${colA},${colB});-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 28px hsl(${hue} 90% 60% / .4))">${waitCount}</div>
-        <div style="font-size:16px;font-weight:700;color:var(--text);margin-top:2px">人</div>
-        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
-          <div style="font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:6px">おおよその時間</div>
-          <div style="font-family:var(--font-num);font-size:30px;font-weight:900;color:${colA}">${waitCount===0?'すぐにご案内':`約 ${estMin} 分`}</div>
+      <div class="card" style="text-align:center;padding:26px 20px 24px;background:linear-gradient(160deg,var(--navy2),var(--navy));border:1px solid rgba(95,208,255,.28);box-shadow:0 0 30px rgba(95,208,255,.1)">
+        <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px">
+          <span style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;animation:blink 1.1s ease infinite"></span>ただいま受付中
+        </div>
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:8px">
+          <span style="font-family:var(--font-num);font-size:76px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;color:${colA};text-shadow:0 0 24px hsl(${hue} 90% 60% / .5)">${waitCount}</span>
+          <span style="font-size:18px;font-weight:700;color:rgba(255,255,255,.85)">人待ち</span>
+        </div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.12)">
+          <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.5);margin-bottom:6px">おおよその時間</div>
+          <div style="font-family:var(--font-num);font-size:28px;font-weight:900;color:var(--gold)">${waitCount===0?'すぐにご案内':`約 ${estMin} 分`}</div>
         </div>
       </div>
-      <button class="btn btn-primary" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="margin-top:16px">整理券を取る</button>
-      ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
+      <div class="card" style="margin-top:14px;text-align:center;padding:22px 20px;background:linear-gradient(160deg,var(--navy2),var(--navy));border:1px solid rgba(244,201,93,.22)">
+        <div style="font-family:var(--font-script);font-style:italic;font-weight:700;font-size:19px;color:#fff;opacity:.85;margin-bottom:14px">Please take a ticket</div>
+        <button class="btn" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="background:linear-gradient(135deg,var(--gold),var(--gold2));color:#2b1600;font-weight:900;box-shadow:0 6px 20px rgba(244,201,93,.25)">▶ タップして整理券を取る</button>
+      </div>
+      ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(95,208,255,.3)">📅 予約する（時間指定）</button>`:''}
       <div class="center" style="margin-top:30px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
       <div class="center" style="margin-top:8px"><a class="link" href="?mode=display" target="_blank">📺 表示ボードを開く</a></div>
     </div>`;
