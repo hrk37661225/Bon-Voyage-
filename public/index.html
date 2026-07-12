@@ -16,7 +16,7 @@
     :root {
       --bg:#08080f; --surface:rgba(255,255,255,.04); --surface2:rgba(255,255,255,.07);
       --border:rgba(255,255,255,.09); --accent:#7c6cf0; --accent2:#fd79a8;
-      --accent3:#55efc4; --warning:#fdcb6e; --danger:#ff7675;
+      --accent3:#55efc4; --warning:#fdcb6e; --danger:#ff9f43;
       --text:#eeeef8; --muted:#6666aa; --glow:124,108,240;
     }
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -36,6 +36,15 @@
     .header h1{font-size:24px;font-weight:800;background:linear-gradient(135deg,#fff 30%,rgba(255,255,255,.5));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
     .store-sub{color:var(--muted);font-size:13px;margin-top:4px}
     .store-loc{color:var(--accent3);font-size:12px;margin-top:3px}
+    .home-emblem{width:64px;height:64px;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:30px;
+      background:linear-gradient(135deg,rgba(var(--glow),.28),rgba(var(--glow),.06));border:1px solid rgba(var(--glow),.35);
+      box-shadow:0 0 30px rgba(var(--glow),.25);animation:emblemFloat 3.2s ease-in-out infinite}
+    @keyframes emblemFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+    .home-tagline{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.6}
+    .how-strip{display:flex;gap:8px;margin:16px 0 18px}
+    .how-chip{flex:1;text-align:center;padding:12px 6px;border-radius:14px;background:var(--surface);border:1px solid var(--border)}
+    .how-chip .ic{font-size:20px;margin-bottom:5px}
+    .how-chip .tx{font-size:10.5px;color:var(--muted);line-height:1.4;font-weight:600}
 
     /* Cards */
     .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:22px;margin-bottom:14px;backdrop-filter:blur(12px)}
@@ -141,7 +150,7 @@
     /* Open pill */
     .open-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:100px;font-size:12px;font-weight:700}
     .open-pill.open{background:rgba(85,239,196,.1);color:var(--accent3)}
-    .open-pill.closed{background:rgba(255,118,117,.1);color:var(--danger)}
+    .open-pill.closed{background:rgba(255,159,67,.1);color:var(--danger)}
 
     /* Section title */
     .sec{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
@@ -715,7 +724,7 @@
     btn.textContent=okLabel;
     if(isDanger){
       btn.className='btn';
-      btn.style='background:rgba(255,118,117,.12);color:var(--danger);border:1px solid rgba(255,118,117,.3);margin-top:0';
+      btn.style='background:rgba(255,159,67,.12);color:var(--danger);border:1px solid rgba(255,159,67,.3);margin-top:0';
     } else {
       btn.className='btn btn-primary';
       btn.style='margin-top:0';
@@ -797,10 +806,17 @@
     const logoTap=`onclick="handleTap()"`;
     return `<div class="page">
       <div class="header">
+        <div class="home-emblem">⚓</div>
         <div class="badge">BON VOYAGE</div>
         <h1>${sn}</h1>
         ${cfg.slogan?`<p class="store-sub">${cfg.slogan}</p>`:''}
         ${cfg.location?`<p class="store-loc">📍 ${cfg.location}</p>`:''}
+        <p class="home-tagline">並んで待たなくてOK。整理券を取って、順番が来たらここでお知らせします。</p>
+      </div>
+      <div class="how-strip">
+        <div class="how-chip"><div class="ic">🎟️</div><div class="tx">その場で<br>整理券発行</div></div>
+        <div class="how-chip"><div class="ic">⏱️</div><div class="tx">待ち時間の<br>目安がわかる</div></div>
+        <div class="how-chip"><div class="ic">🔔</div><div class="tx">番が来たら<br>お知らせ</div></div>
       </div>
       ${!cfg.isOpen?`<div class="card warn" style="text-align:center;margin-bottom:14px"><div style="font-weight:700;color:var(--warning)">現在受付を停止しています</div><div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div></div>`:''}
       ${waitCount===0?`
@@ -1104,7 +1120,7 @@
                 <div style="display:flex;flex-direction:column;gap:4px;margin-left:4px">
                   ${t.status==='waiting'?`<button class="btn-icon" onclick="callTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--accent2);border-color:rgba(var(--glow),.3)">呼出</button>`:''}
                   ${t.status==='called'?`<button class="btn-icon" onclick="doneTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--accent3);border-color:rgba(85,239,196,.3)">完了</button>`:''}
-                  ${(t.status==='waiting'||t.status==='called')?`<button class="btn-icon" onclick="cancelTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--danger);border-color:rgba(255,118,117,.3)">取消</button>`:''}
+                  ${(t.status==='waiting'||t.status==='called')?`<button class="btn-icon" onclick="cancelTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--danger);border-color:rgba(255,159,67,.3)">取消</button>`:''}
                 </div>
               </div>`;
             }).join('')}
@@ -1113,7 +1129,7 @@
       <div class="card">
         <div class="sec">操作</div>
         <button class="btn btn-ghost" id="btn-toggle" style="margin-bottom:10px">${cfg.isOpen?'受付を停止する':'受付を再開する'}</button>
-        <button class="btn" id="btn-reset" style="background:rgba(255,118,117,.08);color:var(--danger);border:1px solid rgba(255,118,117,.2)">全データをリセット</button>
+        <button class="btn" id="btn-reset" style="background:rgba(255,159,67,.08);color:var(--danger);border:1px solid rgba(255,159,67,.2)">全データをリセット</button>
       </div>
       ${cfg.reservationEnabled?`<div class="card">
         <div class="sec">予約リスト (${reservations.length}件)</div>
@@ -1128,7 +1144,7 @@
                 </div>
                 <div style="display:flex;flex-direction:column;gap:5px">
                   ${r.status==='reserved'?`<button class="btn-icon" onclick="markArrived('${r.id}')" style="font-size:11px;padding:5px 8px;color:#34d399;border-color:rgba(52,211,153,.3)">来場✓</button>`:''}
-                  <button class="btn-icon" onclick="cancelReservationById('${r.id}')" style="font-size:11px;padding:5px 8px;color:var(--danger);border-color:rgba(255,118,117,.3)">取消</button>
+                  <button class="btn-icon" onclick="cancelReservationById('${r.id}')" style="font-size:11px;padding:5px 8px;color:var(--danger);border-color:rgba(255,159,67,.3)">取消</button>
                 </div>
               </div>`).join('')}
             `).join('')}
