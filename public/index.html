@@ -694,7 +694,21 @@
   function handleTap(){
     tapCount++;clearTimeout(tapTimer);
     tapTimer=setTimeout(()=>{tapCount=0;},1500);
-    if(tapCount>=5){tapCount=0;isStaff=true;view='staff';startStaffTicketsListener();render();}
+    if(tapCount>=5){tapCount=0;promptStaffPassword();}
+  }
+
+  function promptStaffPassword(){
+    showConfirm(
+      'スタッフ認証',
+      `<input class="field-input" id="staff-pass-input" type="password" inputmode="numeric" placeholder="承認コード" autocomplete="off" style="letter-spacing:8px;font-size:22px;text-align:center;margin-top:4px">`,
+      '入る',
+      ()=>{
+        const entered=(document.getElementById('staff-pass-input')?.value||'').trim();
+        if(entered !== (cfg.stampPassword||'1234')){toast('承認コードが違います');return;}
+        isStaff=true;view='staff';startStaffTicketsListener();render();
+      }
+    );
+    setTimeout(()=>document.getElementById('staff-pass-input')?.focus(),80);
   }
 
   // ── Ticket helpers ────────────────────────────────
