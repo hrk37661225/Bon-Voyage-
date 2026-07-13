@@ -78,6 +78,9 @@
     .btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
     .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 4px 24px rgba(var(--glow),.45)}
     .btn-primary:not(:disabled):active{transform:scale(.97)}
+    .btn-rainbow{background:linear-gradient(90deg,#ff5e5e,#ffb347,#fff45e,#6bff6b,#5ec8ff,#a06bff,#ff5ec8,#ff5e5e);background-size:300% 100%;animation:rainbowShift 5s linear infinite;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.45);box-shadow:0 4px 24px rgba(255,255,255,.2)}
+    .btn-rainbow:not(:disabled):active{transform:scale(.97)}
+    @keyframes rainbowShift{0%{background-position:0% 50%}100%{background-position:300% 50%}}
     .btn-success{background:linear-gradient(135deg,#55efc4,#00b894);color:#0a2d22;box-shadow:0 4px 20px rgba(85,239,196,.25)}
     .btn-success:not(:disabled):active{transform:scale(.97)}
     .btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
@@ -838,7 +841,7 @@
         </div>
       </div>
       <div style="text-align:center;font-size:10.5px;color:var(--muted);margin-top:8px">目安です。前後する場合があります</div>
-      <button class="btn btn-primary" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="margin-top:16px">整理券を取る</button>
+      <button class="btn btn-rainbow" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="margin-top:16px">整理券を取る</button>
       ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
       <div class="center" style="margin-top:30px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
       <div class="center" style="margin-top:8px"><a class="link" href="?mode=display" target="_blank">📺 表示ボードを開く</a></div>
