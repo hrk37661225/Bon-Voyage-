@@ -235,6 +235,7 @@
     .stk-badge.called{background:rgba(var(--glow),.15);color:var(--accent2)}
     .stk-badge.done{background:rgba(85,239,196,.1);color:var(--accent3)}
     .stk-badge.cancelled{background:rgba(255,255,255,.05);color:var(--muted)}
+    .stk-badge.expired{background:rgba(148,158,196,.15);color:var(--danger)}
   </style>
 </head>
 <body>
@@ -407,17 +408,21 @@
       const maxCall=cfg.maxCallCount||30;
       const autoCall=cfg.autoCallEnabled!==false;
       const status=(autoCall&&num<=maxCall)?'called':'waiting';
-      const ref=await db.collection('tickets').add({
-        number:num,status,sid,type:'walkin',
-        nickname:fd.nickname,age:parseInt(fd.age)||0,people:parseInt(fd.people)||1,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
-        calledAt:status==='called'?firebase.firestore.FieldValue.serverTimestamp():null
-      });
-      await cfgRef.update({nextNumber:firebase.firestore.FieldValue.increment(1)});
+      const ticketsRef=db.collection('tickets').doc();
+      const [ref]=await Promise.all([
+        ticketsRef.set({
+          number:num,status,sid,type:'walkin',
+          nickname:fd.nickname,age:parseInt(fd.age)||0,people:parseInt(fd.people)||1,
+          createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+          calledAt:status==='called'?firebase.firestore.FieldValue.serverTimestamp():null
+        }).then(()=>ticketsRef),
+        cfgRef.update({nextNumber:firebase.firestore.FieldValue.increment(1)})
+      ]);
       localStorage.setItem('bv_ticket_id',ref.id);
       myTicket={id:ref.id,number:num,status,...fd};
-      listenMyTicket(ref.id);
       customerSubView='home';
+      render();
+      listenMyTicket(ref.id);
       if(status==='called'){playChime();if(navigator.vibrate)navigator.vibrate([200,80,200]);}
       toast(`整理券 No.${pad(num)} を取得しました`);
     } catch(e){
@@ -762,9 +767,9 @@
       if(el)el.textContent=`${Math.floor(rem/60000)}:${String(Math.floor((rem%60000)/1000)).padStart(2,'0')}`;
       if(rem<=0){
         clearInterval(expireTimer);expireTimerId=null;
-        if(myTicket)db.collection('tickets').doc(myTicket.id).update({status:'cancelled'});
+        if(myTicket)db.collection('tickets').doc(myTicket.id).update({status:'expired'});
         clearMyTicket();
-        toast('呼び出し時間を過ぎたためキャンセルされました');
+        toast('有効時間を過ぎたため受付が終了しました。スタッフにお声がけください');
       }
     },1000);
   }
@@ -1110,7 +1115,7 @@
         <div class="queue-scroll" style="max-height:320px">
           ${staffTickets.length===0?'<div class="empty-msg">まだ整理券は発行されていません</div>':
             staffTickets.map(t=>{
-              const badgeLabel=t.status==='waiting'?'待機中':t.status==='called'?'呼出中':t.status==='done'?'使用済み':'キャンセル';
+              const badgeLabel=t.status==='waiting'?'待機中':t.status==='called'?'呼出中':t.status==='done'?'使用済み':t.status==='expired'?'有効切れ':'キャンセル';
               return `<div class="stk-row">
                 <div class="stk-num">No.${pad(t.number)}</div>
                 <div class="stk-info">
@@ -1119,9 +1124,9 @@
                 </div>
                 <span class="stk-badge ${t.status}">${badgeLabel}</span>
                 <div style="display:flex;flex-direction:column;gap:4px;margin-left:4px">
-                  ${t.status==='waiting'?`<button class="btn-icon" onclick="callTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--accent2);border-color:rgba(var(--glow),.3)">呼出</button>`:''}
-                  ${t.status==='called'?`<button class="btn-icon" onclick="doneTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--accent3);border-color:rgba(85,239,196,.3)">完了</button>`:''}
-                  ${(t.status==='waiting'||t.status==='called')?`<button class="btn-icon" onclick="cancelTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--danger);border-color:rgba(148,158,196,.3)">取消</button>`:''}
+                  ${(t.status==='waiting'||t.status==='expired')?`<button class="btn-icon" onclick="callTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--accent2);border-color:rgba(var(--glow),.3)">呼出</button>`:''}
+                  ${(t.status==='called'||t.status==='expired')?`<button class="btn-icon" onclick="doneTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--accent3);border-color:rgba(85,239,196,.3)">完了</button>`:''}
+                  ${(t.status==='waiting'||t.status==='called'||t.status==='expired')?`<button class="btn-icon" onclick="cancelTicketById('${t.id}')" style="font-size:10px;padding:4px 7px;color:var(--danger);border-color:rgba(148,158,196,.3)">取消</button>`:''}
                 </div>
               </div>`;
             }).join('')}
@@ -1260,6 +1265,7 @@
           <div style="font-size:15px;font-weight:700;margin-bottom:4px">${fd.nickname}</div>
           <div style="font-size:13px;color:var(--muted)">${fd.age}歳 · ${fd.people}名</div>
         </div>
+        <div style="font-size:12px;color:var(--warning);background:rgba(253,203,110,.08);border:1px solid rgba(253,203,110,.15);border-radius:8px;padding:8px 10px;margin-bottom:10px">⚠ 呼び出しから<strong>${cfg.expireMinutes||5}分</strong>以内にお越しください。過ぎると有効期限切れになります</div>
         <div style="font-size:12px;color:var(--muted)">取得後もキャンセルできます</div>`,
         '取得する',
         ()=>getTicketWithForm(fd)
