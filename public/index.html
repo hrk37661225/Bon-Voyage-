@@ -78,7 +78,7 @@
     .btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
     .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 4px 24px rgba(var(--glow),.45)}
     .btn-primary:not(:disabled):active{transform:scale(.97)}
-    .btn-rainbow{background:linear-gradient(135deg,#b026ff,#ff2e9f);color:#fff;box-shadow:0 4px 24px rgba(176,38,255,.45)}
+    .btn-rainbow{background:linear-gradient(135deg,#c977ff,#ff7fc0);color:#fff;box-shadow:0 4px 24px rgba(176,38,255,.4)}
     .btn-rainbow:not(:disabled):active{transform:scale(.97)}
     .btn-success{background:linear-gradient(135deg,#55efc4,#00b894);color:#0a2d22;box-shadow:0 4px 20px rgba(85,239,196,.25)}
     .btn-success:not(:disabled):active{transform:scale(.97)}
@@ -748,7 +748,7 @@
     if(m)m.style.display='none';
   }
 
-  function showConfirm(title, bodyHtml, okLabel, onOk, isDanger=false){
+  function showConfirm(title, bodyHtml, okLabel, onOk, isDanger=false, okClass=null){
     modalCallback=onOk;
     document.getElementById('modal-title').textContent=title;
     document.getElementById('modal-body').innerHTML=bodyHtml;
@@ -758,7 +758,7 @@
       btn.className='btn';
       btn.style='background:rgba(148,158,196,.12);color:var(--danger);border:1px solid rgba(148,158,196,.3);margin-top:0';
     } else {
-      btn.className='btn btn-primary';
+      btn.className='btn '+(okClass||'btn-primary');
       btn.style='margin-top:0';
     }
     document.getElementById('generic-modal').style.display='flex';
@@ -877,7 +877,7 @@
         <div class="field" style="margin-bottom:0"><label class="field-label">人数 *</label>
           <input class="field-input" id="inp-people" type="number" placeholder="1" min="1" max="20" value="${formDraft.people}" inputmode="numeric"></div>
       </div>
-      <button class="btn btn-primary" id="btn-submit-walkin">整理券を取る</button>
+      <button class="btn btn-rainbow" id="btn-submit-walkin">整理券を取る</button>
       <button class="btn btn-ghost" id="btn-back-home" style="margin-top:10px">← 戻る</button>
     </div>`;
   }
@@ -1286,7 +1286,9 @@
         <div style="font-size:12px;color:var(--warning);background:rgba(253,203,110,.08);border:1px solid rgba(253,203,110,.15);border-radius:8px;padding:8px 10px;margin-bottom:10px">⚠ 呼び出しから<strong>${cfg.expireMinutes||5}分</strong>以内にお越しください。過ぎると有効期限切れになります</div>
         <div style="font-size:12px;color:var(--muted)">取得後もキャンセルできます</div>`,
         '取得する',
-        ()=>getTicketWithForm(fd)
+        ()=>getTicketWithForm(fd),
+        false,
+        'btn-rainbow'
       );
     });
     // Reserve form submit → in-app confirmation
