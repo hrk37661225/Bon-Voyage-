@@ -26,7 +26,7 @@
     .bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;
       background:radial-gradient(ellipse 70% 90% at 15% 40%,rgba(var(--glow),.22) 0%,transparent 60%),
                 radial-gradient(ellipse 55% 65% at 88% 18%,rgba(168,212,255,.14) 0%,transparent 60%),
-                radial-gradient(ellipse 45% 55% at 50% 88%,rgba(91,141,239,.08) 0%,transparent 60%);
+                radial-gradient(ellipse 45% 55% at 50% 88%,rgba(240,147,43,.07) 0%,transparent 60%);
       animation:bgBreath 6s ease-in-out infinite alternate}
     @keyframes bgBreath{from{opacity:.75}to{opacity:1}}
     #root{position:relative;z-index:1;min-height:100dvh}
@@ -718,7 +718,7 @@
   function promptStaffPassword(){
     showConfirm(
       'スタッフ認証',
-      `<input class="field-input" id="staff-pass-input" type="password" inputmode="numeric" placeholder="承認コード" autocomplete="off" style="letter-spacing:8px;font-size:22px;text-align:center;margin-top:4px">`,
+      `<input class="field-input" id="staff-pass-input" type="password" autocapitalize="off" autocorrect="off" placeholder="承認コード" autocomplete="off" style="letter-spacing:4px;font-size:22px;text-align:center;margin-top:4px">`,
       '入る',
       async()=>{
         const entered=(document.getElementById('staff-pass-input')?.value||'').trim();
@@ -853,7 +853,7 @@
         <div style="width:1px;background:var(--border);margin:2px 0"></div>
         <div style="flex:1;text-align:center;padding:4px 6px">
           <div style="font-size:20px;margin-bottom:4px">⏱️</div>
-          <div style="font-family:var(--font-num);font-size:${waitCount===0?'26':'32'}px;font-weight:900;line-height:1.4;color:var(--accent2);text-shadow:0 0 20px rgba(91,141,239,.5)">${waitCount===0?'すぐ呼出':`約${estMin}分`}</div>
+          <div style="font-family:var(--font-num);font-size:${waitCount===0?'26':'32'}px;font-weight:900;line-height:1.4;background:linear-gradient(135deg,#fdcb6e,#f0932b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px rgba(253,203,110,.5))">${waitCount===0?'すぐ呼出':`約${estMin}分`}</div>
           <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">呼ばれるまでの目安</div>
         </div>
       </div>
@@ -1082,7 +1082,7 @@
             <div class="modal-sub">この整理券を使用済みにします。<br>スタッフが承認コードを入力してください。</div>
             <div class="field">
               <label class="field-label">スタッフ承認コード</label>
-              <input class="field-input" id="stamp-code" type="password" inputmode="numeric" placeholder="承認コード" autocomplete="off" style="letter-spacing:8px;font-size:22px;text-align:center">
+              <input class="field-input" id="stamp-code" type="password" autocapitalize="off" autocorrect="off" placeholder="承認コード" autocomplete="off" style="letter-spacing:4px;font-size:22px;text-align:center">
             </div>
             <div class="sp"></div>
             <button class="btn btn-success" id="btn-stamp">確認して使用する ✓</button>
@@ -1196,7 +1196,7 @@
             </div>
             <input type="checkbox" id="inp-autocall-enabled" ${cfg.autoCallEnabled!==false?'checked':''} style="width:22px;height:22px;cursor:pointer;accent-color:var(--accent);flex-shrink:0">
           </div>
-          <div class="field"><label class="field-label">スタッフ承認コード</label><input class="field-input" name="stampPassword" type="text" inputmode="numeric" placeholder="変更する場合のみ入力" autocomplete="off"><div style="font-size:11px;color:var(--muted);margin-top:4px">セキュリティのため現在のコードは表示されません。空欄のまま保存すると変更されません</div></div>
+          <div class="field"><label class="field-label">スタッフ承認コード</label><input class="field-input" name="stampPassword" type="text" autocapitalize="off" autocorrect="off" placeholder="変更する場合のみ入力" autocomplete="off"><div style="font-size:11px;color:var(--muted);margin-top:4px">セキュリティのため現在のコードは表示されません。空欄のまま保存すると変更されません</div></div>
           <div class="field"><label class="field-label">呼び出し後の有効時間（分）</label><input class="field-input" name="expireMinutes" type="number" min="1" max="60" step="1" value="${cfg.expireMinutes||5}"><div style="font-size:11px;color:var(--muted);margin-top:4px">この時間を過ぎると自動キャンセルされます</div></div>
           <div class="field"><label class="field-label">1人あたりの目安時間（分）</label><input class="field-input" name="minutesPerPerson" type="number" min="0.5" max="30" step="0.5" value="${cfg.minutesPerPerson||3}"><div style="font-size:11px;color:var(--muted);margin-top:4px">待ち時間の予定呼び出し時刻の計算に使います</div></div>
         </div>
