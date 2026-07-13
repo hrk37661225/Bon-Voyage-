@@ -844,20 +844,22 @@
         ${cfg.location?`<p class="store-loc">📍 ${cfg.location}</p>`:''}
       </div>
       ${!cfg.isOpen?`<div class="card warn" style="text-align:center;margin-bottom:14px"><div style="font-weight:700;color:var(--warning)">現在受付を停止しています</div><div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div></div>`:''}
-      <div class="card" style="padding:22px 14px 18px;display:flex;align-items:stretch;border:1px solid rgba(var(--glow),.32);box-shadow:0 0 34px rgba(var(--glow),.16)">
-        <div style="flex:1;text-align:center;padding:4px 6px">
-          <div style="font-size:20px;margin-bottom:4px">👥</div>
-          <div style="font-family:var(--font-num);font-size:54px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(var(--glow),.55))">${waitCount}</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">今、並んでいる人数</div>
+      <div class="card" style="padding:22px 14px 18px;border:1px solid rgba(var(--glow),.32);box-shadow:0 0 34px rgba(var(--glow),.16)">
+        <div style="display:flex;align-items:stretch">
+          <div style="flex:1;text-align:center;padding:4px 6px">
+            <div style="font-size:20px;margin-bottom:4px">👥</div>
+            <div style="font-family:var(--font-num);font-size:54px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(var(--glow),.55))">${waitCount}</div>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">今、並んでいる人数</div>
+          </div>
+          <div style="width:1px;background:var(--border);margin:2px 0"></div>
+          <div style="flex:1;text-align:center;padding:4px 6px">
+            <div style="font-size:20px;margin-bottom:4px">⏱️</div>
+            <div style="font-family:var(--font-num);font-size:${waitCount===0?'26':'32'}px;font-weight:900;line-height:1.4;background:linear-gradient(135deg,${waitCount===0?'#7ef2c0,#34d399':'#fdcb6e,#f0932b'});-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px rgba(${waitCount===0?'126,242,192':'253,203,110'},.5))">${waitCount===0?'すぐ呼出':`約${estMin}分`}</div>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">呼ばれるまでの目安</div>
+          </div>
         </div>
-        <div style="width:1px;background:var(--border);margin:2px 0"></div>
-        <div style="flex:1;text-align:center;padding:4px 6px">
-          <div style="font-size:20px;margin-bottom:4px">⏱️</div>
-          <div style="font-family:var(--font-num);font-size:${waitCount===0?'26':'32'}px;font-weight:900;line-height:1.4;background:linear-gradient(135deg,#fdcb6e,#f0932b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px rgba(253,203,110,.5))">${waitCount===0?'すぐ呼出':`約${estMin}分`}</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">呼ばれるまでの目安</div>
-        </div>
+        <div style="text-align:center;font-size:10.5px;color:var(--muted);border-top:1px solid var(--border);margin-top:16px;padding-top:10px">目安です。前後する場合があります</div>
       </div>
-      <div style="text-align:center;font-size:10.5px;color:var(--muted);margin-top:8px">目安です。前後する場合があります</div>
       <button class="btn btn-rainbow" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="margin-top:16px">整理券を取る</button>
       ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
       <div class="center" style="margin-top:30px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
