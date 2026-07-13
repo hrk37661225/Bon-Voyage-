@@ -1,8 +1,29 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 文化祭用: 全員読み書き可 (期間限定利用のため)
-    match /{document=**} {
+    // パスワードは secrets/staff に分離し、直接の読み取りを禁止する
+    // (書き込みは設定画面から変更できるよう許可: 誤って公開されても書き込みだけでは漏洩しない)
+    match /secrets/staff {
+      allow read: if false;
+      allow write: if true;
+    }
+
+    // 5-tap / 使用済み確認の合言葉チェックはここへの書き込み可否で判定する
+    // (書き込みが成功=パスワード一致。secrets/staff の値そのものはクライアントに渡らない)
+    match /staffAuth/{attemptId} {
+      allow create: if request.resource.data.password ==
+        get(/databases/$(database)/documents/secrets/staff).data.password;
+      allow read, update, delete: if false;
+    }
+
+    // 文化祭用: アプリが使う公開コレクションは全員読み書き可 (期間限定利用のため)
+    match /config/{id} {
+      allow read, write: if true;
+    }
+    match /tickets/{id} {
+      allow read, write: if true;
+    }
+    match /reservations/{id} {
       allow read, write: if true;
     }
   }

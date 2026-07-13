@@ -343,11 +343,23 @@
       if (!s.exists) {
         await cfgRef.set({isOpen:true,nextNumber:1,maxCallCount:30,
           storeName:'Bon Voyage',slogan:'旅へ出よう',location:'中庭',theme:0,
-          stampPassword:'1234',expireMinutes:5,minutesPerPerson:3,
+          expireMinutes:5,minutesPerPerson:3,
           reservationEnabled:false,slotsPerHour:10,openHour:10,closeHour:16,
           autoCallEnabled:true});
+        await db.collection('secrets').doc('staff').set({password:'1234'});
       } else { applyTheme(s.data().theme||0); }
     } catch(e){}
+  }
+
+  // 書き込み成功可否だけでパスワード一致を判定する(secrets/staff は読み取り不可のため
+  // 実際の値はクライアントに一切渡らない)
+  async function verifyStaffPassword(entered){
+    try{
+      await db.collection('staffAuth').add({password:entered});
+      return true;
+    }catch(e){
+      return false;
+    }
   }
 
   function startListeners() {
@@ -542,7 +554,8 @@
     const input=document.getElementById('stamp-code');
     const entered=(input?.value||'').trim();
     if(!entered){toast('承認コードを入力してください');return;}
-    if(entered !== (cfg.stampPassword||'1234')){
+    const ok=await verifyStaffPassword(entered);
+    if(!ok){
       toast('承認コードが違います');
       if(input)input.value='';
       return;
@@ -619,7 +632,6 @@
       slogan:f.slogan.value||'',
       location:f.location.value||'中庭',
       maxCallCount:parseInt(f.maxCallCount.value)||30,
-      stampPassword:f.stampPassword.value||'1234',
       expireMinutes:parseInt(f.expireMinutes.value)||5,
       minutesPerPerson:parseFloat(f.minutesPerPerson.value)||3,
       autoCallEnabled:document.getElementById('inp-autocall-enabled')?.checked!==false,
@@ -629,6 +641,10 @@
       slotsPerHour:parseInt(f.slotsPerHour.value)||10,
       theme:themeVal
     });
+    const newPass=(f.stampPassword.value||'').trim();
+    if(newPass){
+      await db.collection('secrets').doc('staff').set({password:newPass});
+    }
     toast('設定を保存しました');
     view='staff';render();
   }
@@ -705,9 +721,11 @@
       'スタッフ認証',
       `<input class="field-input" id="staff-pass-input" type="password" inputmode="numeric" placeholder="承認コード" autocomplete="off" style="letter-spacing:8px;font-size:22px;text-align:center;margin-top:4px">`,
       '入る',
-      ()=>{
+      async()=>{
         const entered=(document.getElementById('staff-pass-input')?.value||'').trim();
-        if(entered !== (cfg.stampPassword||'1234')){toast('承認コードが違います');return;}
+        if(!entered){toast('承認コードを入力してください');return;}
+        const ok=await verifyStaffPassword(entered);
+        if(!ok){toast('承認コードが違います');return;}
         isStaff=true;view='staff';startStaffTicketsListener();render();
       }
     );
@@ -1179,7 +1197,7 @@
             </div>
             <input type="checkbox" id="inp-autocall-enabled" ${cfg.autoCallEnabled!==false?'checked':''} style="width:22px;height:22px;cursor:pointer;accent-color:var(--accent);flex-shrink:0">
           </div>
-          <div class="field"><label class="field-label">スタッフ承認コード</label><input class="field-input" name="stampPassword" type="text" inputmode="numeric" placeholder="例: 1234" value="${cfg.stampPassword||'1234'}"></div>
+          <div class="field"><label class="field-label">スタッフ承認コード</label><input class="field-input" name="stampPassword" type="text" inputmode="numeric" placeholder="変更する場合のみ入力" autocomplete="off"><div style="font-size:11px;color:var(--muted);margin-top:4px">セキュリティのため現在のコードは表示されません。空欄のまま保存すると変更されません</div></div>
           <div class="field"><label class="field-label">呼び出し後の有効時間（分）</label><input class="field-input" name="expireMinutes" type="number" min="1" max="60" step="1" value="${cfg.expireMinutes||5}"><div style="font-size:11px;color:var(--muted);margin-top:4px">この時間を過ぎると自動キャンセルされます</div></div>
           <div class="field"><label class="field-label">1人あたりの目安時間（分）</label><input class="field-input" name="minutesPerPerson" type="number" min="0.5" max="30" step="0.5" value="${cfg.minutesPerPerson||3}"><div style="font-size:11px;color:var(--muted);margin-top:4px">待ち時間の予定呼び出し時刻の計算に使います</div></div>
         </div>
