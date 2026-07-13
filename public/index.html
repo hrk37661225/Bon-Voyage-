@@ -330,11 +330,6 @@
     } catch(e){}
   }
   function pad(n){return String(n).padStart(2,'0')}
-  function waitHue(n,max=15){
-    const t=Math.max(0,Math.min(n,max))/max;
-    const hue=210-t*160; // 210=blue -> 50=amber, never enters red (0-40)
-    return hue;
-  }
 
   // ── Firestore ─────────────────────────────────────
   const cfgRef=db.collection('config').doc('queue');
@@ -821,8 +816,6 @@
     const mpp=cfg.minutesPerPerson||3;
     const estMin=Math.round(waitCount*mpp);
     const logoTap=`onclick="handleTap()"`;
-    const hue=waitHue(waitCount);
-    const colA=`hsl(${Math.max(hue,50)} 90% 68%)`, colB=`hsl(${Math.min(hue+16,215)} 90% 58%)`;
     return `<div class="page">
       <div class="header">
         <div class="badge">BON VOYAGE</div>
@@ -831,16 +824,20 @@
         ${cfg.location?`<p class="store-loc">📍 ${cfg.location}</p>`:''}
       </div>
       ${!cfg.isOpen?`<div class="card warn" style="text-align:center;margin-bottom:14px"><div style="font-weight:700;color:var(--warning)">現在受付を停止しています</div><div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div></div>`:''}
-      <div class="card" style="text-align:center;padding:28px 20px 22px">
-        <div style="font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:6px">今、並んでいる人数</div>
-        <div style="font-family:var(--font-num);font-size:80px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,${colA},${colB});-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 28px hsl(${hue} 90% 60% / .4))">${waitCount}</div>
-        <div style="font-size:16px;font-weight:700;color:var(--text);margin-top:2px">人</div>
-        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
-          <div style="font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:4px">整理券を取ってから呼ばれるまで</div>
-          <div style="font-family:var(--font-num);font-size:30px;font-weight:900;color:${colA}">${waitCount===0?'すぐにご案内':`約 ${estMin} 分`}</div>
-          <div style="font-size:10.5px;color:var(--muted);margin-top:4px">目安です。前後する場合があります</div>
+      <div class="card" style="padding:22px 14px 18px;display:flex;align-items:stretch;border:1px solid rgba(var(--glow),.32);box-shadow:0 0 34px rgba(var(--glow),.16)">
+        <div style="flex:1;text-align:center;padding:4px 6px">
+          <div style="font-size:20px;margin-bottom:4px">👥</div>
+          <div style="font-family:var(--font-num);font-size:54px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(var(--glow),.55))">${waitCount}</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">今、並んでいる人数</div>
+        </div>
+        <div style="width:1px;background:var(--border);margin:2px 0"></div>
+        <div style="flex:1;text-align:center;padding:4px 6px">
+          <div style="font-size:20px;margin-bottom:4px">⏱️</div>
+          <div style="font-family:var(--font-num);font-size:${waitCount===0?'26':'32'}px;font-weight:900;line-height:1.4;color:var(--accent3);text-shadow:0 0 20px rgba(6,255,165,.55)">${waitCount===0?'すぐ呼出':`約${estMin}分`}</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">呼ばれるまでの目安</div>
         </div>
       </div>
+      <div style="text-align:center;font-size:10.5px;color:var(--muted);margin-top:8px">目安です。前後する場合があります</div>
       <button class="btn btn-primary" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="margin-top:16px">整理券を取る</button>
       ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
       <div class="center" style="margin-top:30px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
