@@ -861,7 +861,7 @@
           <div style="width:1px;background:var(--border);margin:2px 0"></div>
           <div style="flex:1;text-align:center;padding:4px 6px">
             <div style="font-size:20px;margin-bottom:4px">⏱️</div>
-            <div style="font-family:var(--font-num);font-size:42px;font-weight:900;line-height:1.15;background:linear-gradient(135deg,${waitCount===0?'#7ef2c0,#34d399':'#fdcb6e,#f0932b'});-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px rgba(${waitCount===0?'126,242,192':'253,203,110'},.5))">${waitCount===0?'すぐ呼出':waitRangeLabel(estMin)}</div>
+            <div style="font-family:var(--font-num);font-size:${waitCount===0?'42':'28'}px;font-weight:900;line-height:1.15;white-space:nowrap;background:linear-gradient(135deg,${waitCount===0?'#7ef2c0,#34d399':'#fdcb6e,#f0932b'});-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px rgba(${waitCount===0?'126,242,192':'253,203,110'},.5))">${waitCount===0?'すぐ呼出':waitRangeLabel(estMin)}</div>
             <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">呼ばれるまでの目安</div>
           </div>
         </div>
