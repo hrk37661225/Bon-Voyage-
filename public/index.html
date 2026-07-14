@@ -11,14 +11,14 @@
   <meta name="theme-color" content="#0d3a63">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Outfit:wght@600;700;800;900&family=Dela+Gothic+One&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Outfit:wght@600;700;800;900&family=Shippori+Mincho:wght@700;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg:#0a0612; --surface:rgba(255,255,255,.045); --surface2:rgba(255,255,255,.08);
       --border:rgba(255,255,255,.1); --accent:#a8d4ff; --accent2:#5b8def;
       --accent3:#7ef2c0; --warning:#fdcb6e; --danger:#9498c4;
       --text:#f4eefc; --muted:#8b7fa8; --glow:91,141,239;
-      --font-head:'Dela Gothic One','Zen Kaku Gothic New','Noto Sans JP',-apple-system,sans-serif;
+      --font-head:'Shippori Mincho','Zen Kaku Gothic New','Noto Sans JP',-apple-system,serif;
       --font-num:'Outfit','Noto Sans JP',sans-serif;
     }
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -35,7 +35,7 @@
     .page{max-width:440px;margin:0 auto;padding:16px 18px 52px}
     .header{text-align:center;padding:40px 0 26px}
     .badge{display:inline-block;font-family:var(--font-num);font-size:10px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:var(--accent);border:1px solid rgba(var(--glow),.3);border-radius:100px;padding:4px 14px;margin-bottom:12px}
-    .header h1{font-family:var(--font-head);font-size:24px;font-weight:400;letter-spacing:.5px;line-height:1.3;background:linear-gradient(120deg,#fff 20%,var(--accent2) 65%,var(--accent) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 22px rgba(var(--glow),.35))}
+    .header h1{font-family:var(--font-head);font-size:28px;font-weight:800;letter-spacing:.5px;line-height:1.3;background:linear-gradient(120deg,#fff 20%,var(--accent2) 65%,var(--accent) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 22px rgba(var(--glow),.35))}
     .store-sub{color:var(--muted);font-size:13px;margin-top:4px;font-family:'Noto Sans JP',-apple-system,'Hiragino Kaku Gothic ProN',sans-serif;font-style:normal}
     .store-loc{color:var(--accent2);font-size:12px;margin-top:3px}
 
@@ -332,6 +332,13 @@
     } catch(e){}
   }
   function pad(n){return String(n).padStart(2,'0')}
+  function waitRangeLabel(min){
+    if(min<=10)return '0〜10分';
+    if(min<=20)return '10〜20分';
+    if(min<=30)return '20〜30分';
+    if(min<=40)return '30〜40分';
+    return '40分以上';
+  }
 
   // ── Firestore ─────────────────────────────────────
   const cfgRef=db.collection('config').doc('queue');
@@ -854,7 +861,7 @@
           <div style="width:1px;background:var(--border);margin:2px 0"></div>
           <div style="flex:1;text-align:center;padding:4px 6px">
             <div style="font-size:20px;margin-bottom:4px">⏱️</div>
-            <div style="font-family:var(--font-num);font-size:42px;font-weight:900;line-height:1.15;background:linear-gradient(135deg,${waitCount===0?'#7ef2c0,#34d399':'#fdcb6e,#f0932b'});-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px rgba(${waitCount===0?'126,242,192':'253,203,110'},.5))">${waitCount===0?'すぐ呼出':`約${estMin}分`}</div>
+            <div style="font-family:var(--font-num);font-size:42px;font-weight:900;line-height:1.15;background:linear-gradient(135deg,${waitCount===0?'#7ef2c0,#34d399':'#fdcb6e,#f0932b'});-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px rgba(${waitCount===0?'126,242,192':'253,203,110'},.5))">${waitCount===0?'すぐ呼出':waitRangeLabel(estMin)}</div>
             <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">呼ばれるまでの目安</div>
           </div>
         </div>
