@@ -133,8 +133,8 @@
     .theme-name{font-size:10px;color:var(--muted)}
 
     /* Payment method */
-    .pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .pay-option{padding:16px 10px;border:2px solid var(--border);border-radius:12px;text-align:center;cursor:pointer;transition:all .15s ease}
+    .pay-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .pay-option{padding:14px 6px;border:2px solid var(--border);border-radius:12px;text-align:center;cursor:pointer;transition:all .15s ease}
     .pay-option.selected{border-color:var(--accent);background:rgba(var(--glow),.1)}
     .pay-icon{font-size:24px;margin-bottom:6px}
     .pay-title{font-size:13px;font-weight:700}
@@ -283,6 +283,7 @@
     {name:'モノクロ',  bg:'#080808',a1:'#e8e8e8',a2:'#bbbbbb',a3:'#888888',glow:'200,200,200'},
   ];
   const LOCATIONS = ['正門前','中庭','体育館前','A棟前','B棟前','ステージ横','その他'];
+  const PAYMENT_METHODS = [{name:'現金',icon:'💵'},{name:'PayPay',icon:'📱'},{name:'交通系IC',icon:'🚃'}];
 
   function applyTheme(id) {
     const t = THEMES[id] || THEMES[0];
@@ -372,7 +373,7 @@
           storeName:'Bon Voyage',slogan:'旅へ出よう',location:'中庭',theme:0,
           expireMinutes:5,minutesPerPerson:3,minutesPerOrder:4,
           reservationEnabled:false,slotsPerHour:10,openHour:10,closeHour:16,
-          autoCallEnabled:true,menuItems:[],orderNextNumber:1});
+          autoCallEnabled:true,menuItems:[],orderNextNumber:1,webhookUrl:''});
         await db.collection('secrets').doc('staff').set({password:'1234'});
       } else { applyTheme(s.data().theme||0); }
     } catch(e){}
@@ -572,7 +573,7 @@
     const menu=cfg.menuItems||[];
     const items=Object.entries(orderDraft.items).filter(([,qty])=>qty>0).map(([id,qty])=>{
       const item=menu.find(m=>m.id===id);
-      return item?{id,name:item.name,price:item.price,qty}:null;
+      return item?{id,name:item.name,price:item.price,waitSecs:item.waitSecs||60,qty}:null;
     }).filter(Boolean);
     if(items.length===0){toast('商品を選択してください');return;}
     const total=items.reduce((s,i)=>s+i.price*i.qty,0);
@@ -632,15 +633,63 @@
       if(view==='staff')render();
     });
   }
+  function paymentIcon(method){
+    return (PAYMENT_METHODS.find(pm=>pm.name===method)||{}).icon||'💳';
+  }
+  function exportSalesReportImage(){
+    const s=computeSalesStats();
+    const now=new Date();
+    const W=800, H=280+s.byMethod.length*40+40+(s.topItems.length||1)*44+40;
+    const canvas=document.createElement('canvas');
+    canvas.width=W;canvas.height=H;
+    const ctx=canvas.getContext('2d');
+    ctx.fillStyle='#0a0612';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#f4eefc';ctx.font='bold 34px sans-serif';
+    ctx.fillText(`${cfg.storeName||'Bon Voyage'} 売上レポート`,40,60);
+    ctx.fillStyle='#8b7fa8';ctx.font='15px sans-serif';
+    ctx.fillText(`出力: ${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${pad(now.getHours())}:${pad(now.getMinutes())}`,40,88);
+    let y=150;
+    ctx.fillStyle='#f4eefc';ctx.font='bold 18px sans-serif';ctx.fillText('総売上',40,y);
+    ctx.fillStyle='#a8d4ff';ctx.font='bold 52px sans-serif';ctx.fillText(`¥${s.totalRevenue}`,40,y+55);
+    ctx.fillStyle='#f4eefc';ctx.font='bold 18px sans-serif';ctx.fillText('注文件数',420,y);
+    ctx.fillStyle='#7ef2c0';ctx.font='bold 52px sans-serif';ctx.fillText(`${s.orderCount}件`,420,y+55);
+    y+=130;
+    ctx.fillStyle='#f4eefc';ctx.font='bold 20px sans-serif';ctx.fillText('お支払い方法別',40,y);
+    s.byMethod.forEach(m=>{
+      y+=38;
+      ctx.fillStyle='#eeeef8';ctx.font='18px sans-serif';ctx.textAlign='left';
+      ctx.fillText(`${m.icon} ${m.name}`,40,y);
+      ctx.textAlign='right';ctx.fillText(`¥${m.revenue}`,W-40,y);
+    });
+    y+=54;
+    ctx.textAlign='left';
+    ctx.fillStyle='#f4eefc';ctx.font='bold 20px sans-serif';ctx.fillText('人気商品ランキング',40,y);
+    if(s.topItems.length===0){
+      y+=38;ctx.fillStyle='#8b7fa8';ctx.font='16px sans-serif';ctx.fillText('まだ売上データがありません',40,y);
+    } else {
+      s.topItems.forEach(([name,qty],i)=>{
+        y+=40;
+        ctx.textAlign='left';ctx.fillStyle='#eeeef8';ctx.font='18px sans-serif';
+        ctx.fillText(`${i+1}. ${name}`,40,y);
+        ctx.textAlign='right';ctx.fillText(`${qty}個`,W-40,y);
+      });
+    }
+    const link=document.createElement('a');
+    link.download=`売上レポート_${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}.png`;
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+  }
   function computeSalesStats(){
     const valid=staffOrders.filter(o=>o.status!=='cancelled');
     const totalRevenue=valid.reduce((s,o)=>s+(o.total||0),0);
-    const cashRevenue=valid.filter(o=>o.paymentMethod==='現金').reduce((s,o)=>s+(o.total||0),0);
-    const cashlessRevenue=valid.filter(o=>o.paymentMethod==='キャッシュレス').reduce((s,o)=>s+(o.total||0),0);
+    const byMethod=PAYMENT_METHODS.map(pm=>({
+      name:pm.name,icon:pm.icon,
+      revenue:valid.filter(o=>o.paymentMethod===pm.name).reduce((s,o)=>s+(o.total||0),0)
+    }));
     const itemCounts={};
     valid.forEach(o=>(o.items||[]).forEach(i=>{itemCounts[i.name]=(itemCounts[i.name]||0)+i.qty;}));
     const topItems=Object.entries(itemCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
-    return {totalRevenue,cashRevenue,cashlessRevenue,orderCount:valid.length,topItems};
+    return {totalRevenue,byMethod,orderCount:valid.length,topItems};
   }
   async function advanceOrderStatus(id){
     const o=staffOrders.find(o=>o.id===id);
@@ -649,6 +698,12 @@
     if(!next)return;
     await db.collection('orders').doc(id).update({status:next});
     toast(`No.${pad(o.number)} を${next}にしました`);
+    if(next==='受取済' && cfg.webhookUrl){
+      fetch(cfg.webhookUrl,{
+        method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({number:o.number,nickname:o.nickname,items:o.items,total:o.total,paymentMethod:o.paymentMethod,completedAt:new Date().toISOString()})
+      }).catch(()=>{});
+    }
   }
   async function cancelOrderById(id){
     const o=staffOrders.find(o=>o.id===id);
@@ -664,14 +719,16 @@
     );
   }
   async function addMenuItem(){
-    const nameEl=document.getElementById('inp-menu-name'), priceEl=document.getElementById('inp-menu-price');
+    const nameEl=document.getElementById('inp-menu-name'), priceEl=document.getElementById('inp-menu-price'), secsEl=document.getElementById('inp-menu-waitsecs');
     const name=(nameEl?.value||'').trim();
     const price=parseInt(priceEl?.value)||0;
+    const waitSecs=parseInt(secsEl?.value)||60;
     if(!name||price<=0){toast('商品名と価格を入力してください');return;}
     const id='m'+Date.now().toString(36);
-    await cfgRef.update({menuItems:[...(cfg.menuItems||[]),{id,name,price}]});
+    await cfgRef.update({menuItems:[...(cfg.menuItems||[]),{id,name,price,waitSecs}]});
     if(nameEl)nameEl.value='';
     if(priceEl)priceEl.value='';
+    if(secsEl)secsEl.value='';
     toast('商品を追加しました');
   }
   async function removeMenuItem(id){
@@ -809,12 +866,12 @@
       maxCallCount:parseInt(f.maxCallCount.value)||30,
       expireMinutes:parseInt(f.expireMinutes.value)||5,
       minutesPerPerson:parseFloat(f.minutesPerPerson.value)||3,
-      minutesPerOrder:parseFloat(f.minutesPerOrder.value)||4,
       autoCallEnabled:document.getElementById('inp-autocall-enabled')?.checked!==false,
       reservationEnabled:document.getElementById('inp-resv-enabled')?.checked||false,
       openHour:parseInt(f.openHour.value)??10,
       closeHour:parseInt(f.closeHour.value)??16,
       slotsPerHour:parseInt(f.slotsPerHour.value)||10,
+      webhookUrl:(f.webhookUrl?.value||'').trim(),
       theme:themeVal
     });
     const newPass=(f.stampPassword.value||'').trim();
@@ -1020,8 +1077,8 @@
     const estMin=Math.round(waitCount*mpp);
     const hasMenu=cfg.menuItems&&cfg.menuItems.length>0;
     const cookingCount=orders.length;
-    const mpo=cfg.minutesPerOrder||4;
-    const estOrderMin=Math.round(cookingCount*mpo);
+    const totalWaitSecs=orders.reduce((s,o)=>s+(o.items||[]).reduce((s2,i)=>s2+(i.waitSecs||60)*i.qty,0),0);
+    const estOrderMin=Math.round(totalWaitSecs/60);
     const logoTap=`onclick="handleTap()"`;
     const ticketStatCard=hasMenu?`
       <div class="card" style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between">
@@ -1230,12 +1287,9 @@
       <div class="card">
         <div class="sec">お支払い方法 *</div>
         <div class="pay-grid">
-          <div class="pay-option ${orderDraft.paymentMethod==='現金'?'selected':''}" onclick="selectOrderPayment('現金')">
-            <div class="pay-icon">💵</div><div class="pay-title">現金</div>
-          </div>
-          <div class="pay-option ${orderDraft.paymentMethod==='キャッシュレス'?'selected':''}" onclick="selectOrderPayment('キャッシュレス')">
-            <div class="pay-icon">📱</div><div class="pay-title">キャッシュレス</div>
-          </div>
+          ${PAYMENT_METHODS.map(pm=>`<div class="pay-option ${orderDraft.paymentMethod===pm.name?'selected':''}" onclick="selectOrderPayment('${pm.name}')">
+            <div class="pay-icon">${pm.icon}</div><div class="pay-title">${pm.name}</div>
+          </div>`).join('')}
         </div>
       </div>
       <div class="card" style="text-align:center">
@@ -1270,7 +1324,7 @@
       <div class="card">
         <div class="sec">注文内容 (${o.nickname}さん)</div>
         ${o.items.map(i=>`<div class="row"><div class="row-label">${i.name} ×${i.qty}</div><div class="row-value">¥${i.price*i.qty}</div></div>`).join('')}
-        ${o.paymentMethod?`<div class="row"><div class="row-label">お支払い方法</div><div class="row-value">${o.paymentMethod==='現金'?'💵':'📱'} ${o.paymentMethod}</div></div>`:''}
+        ${o.paymentMethod?`<div class="row"><div class="row-label">お支払い方法</div><div class="row-value">${paymentIcon(o.paymentMethod)} ${o.paymentMethod}</div></div>`:''}
         <div class="row" style="border-top:1px solid var(--border);margin-top:4px;padding-top:10px">
           <div class="row-label" style="font-weight:700">合計</div><div class="row-value" style="color:var(--accent2)">¥${o.total}</div>
         </div>
@@ -1475,25 +1529,24 @@
       </div>`:''}
       ${(cfg.menuItems&&cfg.menuItems.length>0)?(()=>{
         const s=computeSalesStats();
-        const cashPct=s.totalRevenue>0?Math.round(s.cashRevenue/s.totalRevenue*100):0;
-        const cashlessPct=100-cashPct;
-        return `<div class="card">
+        const barColors=['var(--accent)','var(--accent2)','var(--accent3)'];
+        return `<div class="card" id="sales-report-card">
           <div class="sec">💰 売上レポート</div>
           <div class="stats-row" style="margin-bottom:14px">
             <div class="stat-box"><div class="stat-num" style="color:var(--accent2)">¥${s.totalRevenue}</div><div class="stat-label">総売上</div></div>
             <div class="stat-box"><div class="stat-num" style="color:var(--accent3)">${s.orderCount}</div><div class="stat-label">注文件数</div></div>
           </div>
           ${s.totalRevenue>0?`<div style="margin-bottom:14px">
-            <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-bottom:6px">
-              <span>💵 現金 ¥${s.cashRevenue}</span><span>📱 キャッシュレス ¥${s.cashlessRevenue}</span>
+            <div style="display:flex;height:10px;border-radius:100px;overflow:hidden;background:var(--surface2);margin-bottom:8px">
+              ${s.byMethod.map((m,i)=>`<div style="width:${Math.round(m.revenue/s.totalRevenue*100)}%;background:${barColors[i%3]}"></div>`).join('')}
             </div>
-            <div style="display:flex;height:10px;border-radius:100px;overflow:hidden;background:var(--surface2)">
-              <div style="width:${cashPct}%;background:linear-gradient(90deg,var(--accent),var(--accent2))"></div>
-              <div style="width:${cashlessPct}%;background:rgba(var(--glow),.3)"></div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11.5px;color:var(--muted)">
+              ${s.byMethod.map(m=>`<span>${m.icon} ${m.name} ¥${m.revenue}</span>`).join('')}
             </div>
           </div>`:''}
           ${s.topItems.length>0?`<div class="sec" style="margin-top:2px">人気商品ランキング</div>
             ${s.topItems.map(([name,qty],i)=>`<div class="row"><div class="row-label">${i+1}. ${name}</div><div class="row-value">${qty}個</div></div>`).join('')}`:'<div class="empty-msg">まだ売上データがありません</div>'}
+          <button type="button" class="btn btn-ghost" id="btn-export-sales" style="margin-top:12px">🖼 画像として保存</button>
         </div>`;
       })():''}
       ${(cfg.menuItems&&cfg.menuItems.length>0)?`<div class="card">
@@ -1506,7 +1559,7 @@
                 <div class="stk-num">No.${pad(o.number)}</div>
                 <div class="stk-info">
                   <div class="stk-name">${o.nickname} <span style="font-weight:400;font-size:11px;color:var(--muted)">¥${o.total}</span></div>
-                  <div class="stk-meta">${o.items.map(i=>`${i.name}×${i.qty}`).join('、')} ${o.paymentMethod?(o.paymentMethod==='現金'?'💵':'📱'):''}</div>
+                  <div class="stk-meta">${o.items.map(i=>`${i.name}×${i.qty}`).join('、')} ${o.paymentMethod?paymentIcon(o.paymentMethod):''}</div>
                 </div>
                 <span class="stk-badge ${o.status==='受取済み'?'done':'waiting'}">${o.status}</span>
                 <div style="display:flex;flex-direction:column;gap:4px;margin-left:4px">
@@ -1571,15 +1624,20 @@
           <div style="font-size:11px;color:var(--muted);margin-bottom:12px">1つ以上登録すると、ホーム画面に「商品を注文する」ボタンが表示されます</div>
           ${(cfg.menuItems||[]).length===0?'<div class="empty-msg" style="margin-bottom:12px">まだ商品がありません</div>':
             (cfg.menuItems||[]).map(item=>`<div class="row">
-              <div class="row-label">${item.name} <span style="color:var(--accent2);font-weight:700">¥${item.price}</span></div>
+              <div class="row-label">${item.name} <span style="color:var(--accent2);font-weight:700">¥${item.price}</span> <span style="color:var(--muted);font-size:11px">約${item.waitSecs||60}秒</span></div>
               <button type="button" class="btn-icon" onclick="removeMenuItem('${item.id}')" style="font-size:11px;padding:5px 8px;color:var(--danger);border-color:rgba(148,158,196,.3)">削除</button>
             </div>`).join('')}
           <div style="display:flex;gap:8px;margin-top:12px">
             <input class="field-input" id="inp-menu-name" type="text" placeholder="商品名" style="flex:2" autocomplete="off">
             <input class="field-input" id="inp-menu-price" type="number" placeholder="価格" min="1" style="flex:1" inputmode="numeric">
           </div>
+          <input class="field-input" id="inp-menu-waitsecs" type="number" placeholder="調理時間（秒）例: 60" min="1" style="margin-top:8px" inputmode="numeric">
           <button type="button" class="btn btn-ghost" id="btn-add-menu-item" style="margin-top:10px">＋ 商品を追加</button>
-          <div class="field" style="margin-top:14px;margin-bottom:0"><label class="field-label">1件あたりの目安調理時間（分）</label><input class="field-input" name="minutesPerOrder" type="number" min="0.5" max="30" step="0.5" value="${cfg.minutesPerOrder||4}"><div style="font-size:11px;color:var(--muted);margin-top:4px">受け取りまでの目安時間の計算に使います</div></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:10px">受け取りまでの目安時間は、注文中の商品ごとの調理時間の合計から自動計算されます</div>
+          <div class="field" style="margin-top:14px;margin-bottom:0"><label class="field-label">会計連携Webhook URL（任意）</label>
+            <input class="field-input" name="webhookUrl" type="text" placeholder="例: Google Apps ScriptのURL" value="${cfg.webhookUrl||''}" autocomplete="off">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">設定すると、受取済みになった注文がGoogleスプレッドシートなどに自動送信されます</div>
+          </div>
         </div>
         <div class="card">
           <div class="sec">テーマ（背景・カラー）</div>
@@ -1718,6 +1776,7 @@
     document.getElementById('btn-plus')?.addEventListener('click',()=>updateCallCount(1));
     document.getElementById('btn-toggle')?.addEventListener('click',toggleOpen);
     document.getElementById('btn-reset')?.addEventListener('click',resetAll);
+    document.getElementById('btn-export-sales')?.addEventListener('click',exportSalesReportImage);
   }
   function bindSettings(){
     document.getElementById('settings-form')?.addEventListener('submit',e=>{e.preventDefault();saveSettings(e.target);});
