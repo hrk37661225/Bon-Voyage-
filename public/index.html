@@ -304,11 +304,13 @@
   let cfg=null, myTicket=null, tickets=[], isStaff=false;
   let reservations=[], myReservation=null;
   let staffTickets=[], staffTicketsUnsub=null;
+  let myOrder=null, staffOrders=[], staffOrdersUnsub=null;
   let modalCallback=null;
-  let customerSubView='home'; // home | walkinForm | reserveSlots | reserveForm
+  let customerSubView='home'; // home | walkinForm | reserveSlots | reserveForm | orderMenu
   let selectedSlot=null;
   let formDraft={nickname:'',age:'',people:'1'};
   let reserveDraft={name:'',age:'',people:'1',idType:''};
+  let orderDraft={nickname:'',items:{}};
   let view = INITIAL_MODE === 'display' ? 'display' : INITIAL_MODE === 'staff' ? 'staff' : 'customer';
   let tapCount=0, tapTimer, expireTimer, expireTimerId;
 
@@ -356,7 +358,7 @@
           storeName:'Bon Voyage',slogan:'旅へ出よう',location:'中庭',theme:0,
           expireMinutes:5,minutesPerPerson:3,
           reservationEnabled:false,slotsPerHour:10,openHour:10,closeHour:16,
-          autoCallEnabled:true});
+          autoCallEnabled:true,menuItems:[],orderNextNumber:1});
         await db.collection('secrets').doc('staff').set({password:'1234'});
       } else { applyTheme(s.data().theme||0); }
     } catch(e){}
@@ -394,6 +396,8 @@
     if(saved && INITIAL_MODE==='customer') listenMyTicket(saved);
     const savedR=localStorage.getItem('bv_reservation_id');
     if(savedR && INITIAL_MODE==='customer') listenMyReservation(savedR);
+    const savedO=localStorage.getItem('bv_order_id');
+    if(savedO && INITIAL_MODE==='customer') listenMyOrder(savedO);
   }
 
   function listenMyTicket(id) {
@@ -504,6 +508,87 @@
     await db.collection('reservations').doc(id).update({status:'arrived',arrivedAt:firebase.firestore.FieldValue.serverTimestamp()});
     toast('来場確認しました');
   }
+
+  // ── Order (menu ordering sub-feature) ─────────────
+  const ORDER_STATUS_FLOW=['注文受付','調理中','完成','受取済み'];
+  function listenMyOrder(id){
+    db.collection('orders').doc(id).onSnapshot(s=>{
+      if(!s.exists){clearMyOrder();return;}
+      const data=s.data();
+      if(data.status==='cancelled'){clearMyOrder();return;}
+      const prev=myOrder?.status;
+      myOrder={id:s.id,...data};
+      if(prev==='調理中'&&myOrder.status==='完成'){
+        playChime();
+        if(navigator.vibrate)navigator.vibrate([200,80,200,80,300]);
+        toast('🍜 ご注文の品ができあがりました！');
+      }
+      render();
+    });
+  }
+  function clearMyOrder(){
+    myOrder=null;localStorage.removeItem('bv_order_id');render();
+  }
+  function changeOrderQty(id,delta){
+    const cur=orderDraft.items[id]||0;
+    const next=Math.max(0,cur+delta);
+    if(next===0)delete orderDraft.items[id];
+    else orderDraft.items[id]=next;
+    render();
+  }
+  function orderDraftTotal(){
+    const items=cfg.menuItems||[];
+    return Object.entries(orderDraft.items).reduce((s,[id,qty])=>{
+      const item=items.find(m=>m.id===id);
+      return s+(item?item.price*qty:0);
+    },0);
+  }
+  async function submitOrder(fd){
+    if(!cfg?.isOpen){toast('現在受付を停止しています');return;}
+    if(localStorage.getItem('bv_order_id')){toast('すでに注文があります');return;}
+    const menu=cfg.menuItems||[];
+    const items=Object.entries(orderDraft.items).filter(([,qty])=>qty>0).map(([id,qty])=>{
+      const item=menu.find(m=>m.id===id);
+      return item?{id,name:item.name,price:item.price,qty}:null;
+    }).filter(Boolean);
+    if(items.length===0){toast('商品を選択してください');return;}
+    const total=items.reduce((s,i)=>s+i.price*i.qty,0);
+    const btn=document.getElementById('btn-submit-order');
+    if(btn)btn.disabled=true;
+    try{
+      const num=cfg.orderNextNumber||1;
+      const ordersRef=db.collection('orders').doc();
+      await Promise.all([
+        ordersRef.set({
+          number:num,nickname:fd.nickname,items,total,status:'注文受付',sid,
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        }),
+        cfgRef.update({orderNextNumber:firebase.firestore.FieldValue.increment(1)})
+      ]);
+      localStorage.setItem('bv_order_id',ordersRef.id);
+      myOrder={id:ordersRef.id,number:num,nickname:fd.nickname,items,total,status:'注文受付'};
+      orderDraft={nickname:'',items:{}};
+      customerSubView='home';
+      render();
+      listenMyOrder(ordersRef.id);
+      toast(`注文 No.${pad(num)} を受け付けました`);
+    }catch(e){
+      toast('エラーが発生しました。再試行してください');
+      if(btn)btn.disabled=false;
+    }
+  }
+  async function cancelOrder(){
+    if(!myOrder)return;
+    showConfirm(
+      '注文をキャンセル',
+      `<strong>No.${pad(myOrder.number)}</strong> の注文をキャンセルしますか？`,
+      'キャンセルする',
+      async()=>{
+        await db.collection('orders').doc(myOrder.id).update({status:'cancelled'});
+        clearMyOrder();toast('注文をキャンセルしました');
+      },true
+    );
+  }
   async function cancelReservationById(id){
     const r=reservations.find(r=>r.id===id);
     showConfirm(
@@ -515,6 +600,50 @@
         toast('予約をキャンセルしました');
       },true
     );
+  }
+
+  function startStaffOrdersListener(){
+    if(staffOrdersUnsub)return;
+    staffOrdersUnsub=db.collection('orders').orderBy('number','asc').onSnapshot(s=>{
+      staffOrders=s.docs.map(d=>({id:d.id,...d.data()}));
+      if(view==='staff')render();
+    });
+  }
+  async function advanceOrderStatus(id){
+    const o=staffOrders.find(o=>o.id===id);
+    if(!o)return;
+    const next=ORDER_STATUS_FLOW[ORDER_STATUS_FLOW.indexOf(o.status)+1];
+    if(!next)return;
+    await db.collection('orders').doc(id).update({status:next});
+    toast(`No.${pad(o.number)} を${next}にしました`);
+  }
+  async function cancelOrderById(id){
+    const o=staffOrders.find(o=>o.id===id);
+    if(!o)return;
+    showConfirm(
+      `No.${pad(o.number)} をキャンセル`,
+      `<strong>${o.nickname}</strong>さんの注文をキャンセルします`,
+      'キャンセルする',
+      async()=>{
+        await db.collection('orders').doc(id).update({status:'cancelled'});
+        toast(`No.${pad(o.number)} をキャンセルしました`);
+      },true
+    );
+  }
+  async function addMenuItem(){
+    const nameEl=document.getElementById('inp-menu-name'), priceEl=document.getElementById('inp-menu-price');
+    const name=(nameEl?.value||'').trim();
+    const price=parseInt(priceEl?.value)||0;
+    if(!name||price<=0){toast('商品名と価格を入力してください');return;}
+    const id='m'+Date.now().toString(36);
+    await cfgRef.update({menuItems:[...(cfg.menuItems||[]),{id,name,price}]});
+    if(nameEl)nameEl.value='';
+    if(priceEl)priceEl.value='';
+    toast('商品を追加しました');
+  }
+  async function removeMenuItem(id){
+    await cfgRef.update({menuItems:(cfg.menuItems||[]).filter(m=>m.id!==id)});
+    toast('商品を削除しました');
   }
 
   function selectSlot(id,time,date,available){
@@ -613,23 +742,25 @@
   async function resetAll(){
     showConfirm(
       '⚠ 全データをリセット',
-      '整理券・予約が全て削除されます。<br>この操作は取り消せません。',
+      '整理券・予約・注文が全て削除されます。<br>この操作は取り消せません。',
       '次へ →',
       ()=>showConfirm(
         '本当によろしいですか？',
         '<strong>全データが完全に削除されます。</strong><br>絶対に取り消せません。',
         '完全に削除する',
         async()=>{
-          const [tSnap,rSnap]=await Promise.all([
+          const [tSnap,rSnap,oSnap]=await Promise.all([
             db.collection('tickets').get(),
-            db.collection('reservations').get()
+            db.collection('reservations').get(),
+            db.collection('orders').get()
           ]);
           const batch=db.batch();
           tSnap.docs.forEach(d=>batch.delete(d.ref));
           rSnap.docs.forEach(d=>batch.delete(d.ref));
+          oSnap.docs.forEach(d=>batch.delete(d.ref));
           await batch.commit();
-          await cfgRef.update({nextNumber:1,maxCallCount:30});
-          staffTickets=[];
+          await cfgRef.update({nextNumber:1,maxCallCount:30,orderNextNumber:1});
+          staffTickets=[];staffOrders=[];
           toast('全データをリセットしました');
         },true
       ),true
@@ -717,7 +848,8 @@
   function staffLogout(){
     isStaff=false;view='customer';
     if(staffTicketsUnsub){staffTicketsUnsub();staffTicketsUnsub=null;}
-    staffTickets=[];
+    if(staffOrdersUnsub){staffOrdersUnsub();staffOrdersUnsub=null;}
+    staffTickets=[];staffOrders=[];
     render();toast('スタッフ画面を終了しました');
   }
 
@@ -737,7 +869,7 @@
         if(!entered){toast('承認コードを入力してください');return;}
         const ok=await verifyStaffPassword(entered);
         if(!ok){toast('承認コードが違います');return;}
-        isStaff=true;view='staff';startStaffTicketsListener();render();
+        isStaff=true;view='staff';startStaffTicketsListener();startStaffOrdersListener();render();
       }
     );
     setTimeout(()=>document.getElementById('staff-pass-input')?.focus(),80);
@@ -816,6 +948,9 @@
       reserveDraft.people=document.getElementById('inp-reserve-people')?.value??reserveDraft.people;
       reserveDraft.idType=document.getElementById('inp-idtype')?.value??reserveDraft.idType;
     }
+    if(view==='customer'&&customerSubView==='orderMenu'){
+      orderDraft.nickname=document.getElementById('inp-order-nickname')?.value??orderDraft.nickname;
+    }
     const root=document.getElementById('root');
     if(view==='display')     {root.innerHTML=renderDisplay();return;}
     if(view==='staff')       {root.innerHTML=renderStaff();}
@@ -835,9 +970,11 @@
   function renderCustomer(){
     if(myTicket) return renderTicketView();
     if(myReservation) return renderReservationView();
+    if(myOrder) return renderOrderView();
     if(customerSubView==='walkinForm') return renderWalkInForm();
     if(customerSubView==='reserveSlots') return renderReserveSlots();
     if(customerSubView==='reserveForm') return renderReserveForm();
+    if(customerSubView==='orderMenu') return renderOrderMenuForm();
     return renderCustomerHome();
   }
 
@@ -874,6 +1011,7 @@
       </div>
       <button class="btn btn-rainbow" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="margin-top:16px">整理券を取る</button>
       ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
+      ${(cfg.menuItems&&cfg.menuItems.length>0)?`<button class="btn btn-primary" id="btn-to-order" style="margin-top:10px">🍜 商品を注文する</button>`:''}
       <div class="center" style="margin-top:30px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
       <div class="center" style="margin-top:8px"><a class="link" href="?mode=display" target="_blank">📺 表示ボードを開く</a></div>
     </div>`;
@@ -991,6 +1129,72 @@
       ${!isArrived?`<p style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:12px;line-height:1.6">予約時間帯にカウンターへお越しの際、<br>この画面とともに身分証をスタッフにご提示ください</p>`:''}
       ${!isArrived?`<button class="btn btn-ghost" id="btn-cancel-resv" style="font-size:13px;padding:12px;color:var(--muted)">予約をキャンセル</button>`:''}
       ${isArrived?`<button class="btn btn-ghost" id="btn-new-resv" style="margin-top:4px">新しい予約をする</button>`:''}
+      <div class="center" style="margin-top:22px"><span class="bv-logo" onclick="handleTap()">✦ BON VOYAGE ✦</span></div>
+    </div>`;
+  }
+
+  function renderOrderMenuForm(){
+    const items=cfg.menuItems||[];
+    const total=orderDraftTotal();
+    return `<div class="page">
+      <div class="header"><div class="badge">商品注文</div><h1>商品を選ぶ</h1><p class="store-sub">欲しい商品の数を選んでください</p></div>
+      <div class="card">
+        <div class="field" style="margin-bottom:0"><label class="field-label">ニックネーム *</label>
+          <input class="field-input" id="inp-order-nickname" type="text" placeholder="例: たろう" value="${orderDraft.nickname}" maxlength="20" autocomplete="off"></div>
+      </div>
+      <div class="card">
+        <div class="sec">メニュー</div>
+        ${items.length===0?'<div class="empty-msg">まだ商品がありません</div>':
+          items.map(item=>{
+            const qty=orderDraft.items[item.id]||0;
+            return `<div class="row">
+              <div class="row-label">${item.name}<br><span style="color:var(--accent2);font-weight:700;font-size:14px">¥${item.price}</span></div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <button class="ctrl-btn" style="width:34px;height:34px;font-size:16px;border-radius:9px" onclick="changeOrderQty('${item.id}',-1)" ${qty<=0?'disabled':''}>−</button>
+                <div style="min-width:22px;text-align:center;font-weight:700;font-family:var(--font-num)">${qty}</div>
+                <button class="ctrl-btn" style="width:34px;height:34px;font-size:16px;border-radius:9px" onclick="changeOrderQty('${item.id}',1)">＋</button>
+              </div>
+            </div>`;
+          }).join('')}
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:6px">合計</div>
+        <div style="font-family:var(--font-num);font-size:36px;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">¥${total}</div>
+      </div>
+      <button class="btn btn-primary" id="btn-submit-order" ${total<=0?'disabled':''}>注文する</button>
+      <button class="btn btn-ghost" id="btn-back-home" style="margin-top:10px">← 戻る</button>
+    </div>`;
+  }
+
+  function renderOrderView(){
+    const o=myOrder;
+    const statusInfo={
+      '注文受付':{label:'注文受付済み',color:'var(--warning)',icon:'📝'},
+      '調理中':{label:'調理中です',color:'var(--accent2)',icon:'🔥'},
+      '完成':{label:'できあがりました！',color:'var(--accent3)',icon:'✅'},
+      '受取済み':{label:'受取済み',color:'var(--muted)',icon:'🎉'}
+    }[o.status]||{label:o.status,color:'var(--muted)',icon:'❔'};
+    const isDone=o.status==='受取済み';
+    const canCancel=o.status==='注文受付';
+    return `<div class="page">
+      ${o.status==='完成'?`<div class="called-overlay"></div>`:''}
+      <div class="header"><div class="badge">ORDER</div><h1>注文状況</h1></div>
+      <div class="card" style="text-align:center;padding:28px 20px">
+        <div style="font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:8px">注文番号</div>
+        <div style="font-family:var(--font-num);font-size:56px;font-weight:900;line-height:1;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">No.${pad(o.number)}</div>
+        <span class="status" style="background:rgba(var(--glow),.12);color:${statusInfo.color};border:1px solid rgba(var(--glow),.25)">
+          <span class="dot" style="background:${statusInfo.color}"></span>${statusInfo.icon} ${statusInfo.label}
+        </span>
+      </div>
+      <div class="card">
+        <div class="sec">注文内容 (${o.nickname}さん)</div>
+        ${o.items.map(i=>`<div class="row"><div class="row-label">${i.name} ×${i.qty}</div><div class="row-value">¥${i.price*i.qty}</div></div>`).join('')}
+        <div class="row" style="border-top:1px solid var(--border);margin-top:4px;padding-top:10px">
+          <div class="row-label" style="font-weight:700">合計</div><div class="row-value" style="color:var(--accent2)">¥${o.total}</div>
+        </div>
+      </div>
+      ${canCancel?`<button class="btn btn-ghost" id="btn-cancel-order" style="font-size:13px;padding:12px;color:var(--muted)">注文をキャンセル</button>`:''}
+      ${isDone?`<button class="btn btn-primary" id="btn-new-order">閉じる</button>`:''}
       <div class="center" style="margin-top:22px"><span class="bv-logo" onclick="handleTap()">✦ BON VOYAGE ✦</span></div>
     </div>`;
   }
@@ -1187,6 +1391,27 @@
               </div>`).join('')}
             `).join('')}
       </div>`:''}
+      ${(cfg.menuItems&&cfg.menuItems.length>0)?`<div class="card">
+        <div class="sec">🍜 注文一覧 (${staffOrders.filter(o=>o.status!=='cancelled').length}件)</div>
+        <div class="queue-scroll" style="max-height:320px">
+          ${staffOrders.filter(o=>o.status!=='cancelled').length===0?'<div class="empty-msg">まだ注文はありません</div>':
+            staffOrders.filter(o=>o.status!=='cancelled').map(o=>{
+              const nextLabel={'注文受付':'調理開始','調理中':'完成にする','完成':'受渡完了'}[o.status];
+              return `<div class="stk-row">
+                <div class="stk-num">No.${pad(o.number)}</div>
+                <div class="stk-info">
+                  <div class="stk-name">${o.nickname} <span style="font-weight:400;font-size:11px;color:var(--muted)">¥${o.total}</span></div>
+                  <div class="stk-meta">${o.items.map(i=>`${i.name}×${i.qty}`).join('、')}</div>
+                </div>
+                <span class="stk-badge ${o.status==='受取済み'?'done':'waiting'}">${o.status}</span>
+                <div style="display:flex;flex-direction:column;gap:4px;margin-left:4px">
+                  ${nextLabel?`<button class="btn-icon" onclick="advanceOrderStatus('${o.id}')" style="font-size:10px;padding:4px 7px;color:var(--accent2);border-color:rgba(var(--glow),.3)">${nextLabel}</button>`:''}
+                  ${o.status!=='受取済み'?`<button class="btn-icon" onclick="cancelOrderById('${o.id}')" style="font-size:10px;padding:4px 7px;color:var(--danger);border-color:rgba(148,158,196,.3)">取消</button>`:''}
+                </div>
+              </div>`;
+            }).join('')}
+        </div>
+      </div>`:''}
       <div class="center" style="margin-top:10px"><a class="link" href="?mode=display" target="_blank">📺 表示ボードを別タブで開く</a></div>
       <div class="center" style="margin-top:10px"><button onclick="staffLogout()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px">スタッフ画面を終了</button></div>
     </div>`;
@@ -1237,6 +1462,20 @@
           </div>
         </div>
         <div class="card">
+          <div class="sec">🍜 商品メニュー管理</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px">1つ以上登録すると、ホーム画面に「商品を注文する」ボタンが表示されます</div>
+          ${(cfg.menuItems||[]).length===0?'<div class="empty-msg" style="margin-bottom:12px">まだ商品がありません</div>':
+            (cfg.menuItems||[]).map(item=>`<div class="row">
+              <div class="row-label">${item.name} <span style="color:var(--accent2);font-weight:700">¥${item.price}</span></div>
+              <button type="button" class="btn-icon" onclick="removeMenuItem('${item.id}')" style="font-size:11px;padding:5px 8px;color:var(--danger);border-color:rgba(148,158,196,.3)">削除</button>
+            </div>`).join('')}
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <input class="field-input" id="inp-menu-name" type="text" placeholder="商品名" style="flex:2" autocomplete="off">
+            <input class="field-input" id="inp-menu-price" type="number" placeholder="価格" min="1" style="flex:1" inputmode="numeric">
+          </div>
+          <button type="button" class="btn btn-ghost" id="btn-add-menu-item" style="margin-top:10px">＋ 商品を追加</button>
+        </div>
+        <div class="card">
           <div class="sec">テーマ（背景・カラー）</div>
           <div class="theme-grid">
             ${THEMES.map((t,i)=>`<label class="theme-swatch ${(cfg.theme||0)===i?'selected':''}">
@@ -1280,6 +1519,7 @@
     document.getElementById('btn-to-walkin')?.addEventListener('click',()=>{customerSubView='walkinForm';render();});
     document.getElementById('btn-to-reserve')?.addEventListener('click',()=>{customerSubView='reserveSlots';render();});
     document.getElementById('btn-to-reserve-form')?.addEventListener('click',()=>{customerSubView='reserveForm';render();});
+    document.getElementById('btn-to-order')?.addEventListener('click',()=>{customerSubView='orderMenu';render();});
     document.getElementById('btn-back-home')?.addEventListener('click',()=>{customerSubView='home';render();});
     document.getElementById('btn-back-slots')?.addEventListener('click',()=>{customerSubView='reserveSlots';render();});
     // Walk-in form submit → in-app confirmation
@@ -1340,6 +1580,31 @@
     // Reservation actions
     document.getElementById('btn-cancel-resv')?.addEventListener('click',cancelReservation);
     document.getElementById('btn-new-resv')?.addEventListener('click',()=>clearMyReservation());
+    // Order menu submit → in-app confirmation
+    document.getElementById('btn-submit-order')?.addEventListener('click',()=>{
+      const nickname=(document.getElementById('inp-order-nickname')?.value||'').trim();
+      if(!nickname){toast('ニックネームを入力してください');return;}
+      orderDraft.nickname=nickname;
+      const menu=cfg.menuItems||[];
+      const lines=Object.entries(orderDraft.items).filter(([,qty])=>qty>0).map(([id,qty])=>{
+        const item=menu.find(m=>m.id===id);
+        return item?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>${item.name} ×${qty}</span><span>¥${item.price*qty}</span></div>`:'';
+      }).join('');
+      const total=orderDraftTotal();
+      showConfirm(
+        '注文しますか？',
+        `<div style="background:rgba(255,255,255,.04);border-radius:12px;padding:12px 14px;margin-bottom:10px">
+          <div style="font-size:15px;font-weight:700;margin-bottom:8px">${nickname}</div>
+          ${lines}
+          <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:700"><span>合計</span><span>¥${total}</span></div>
+        </div>`,
+        '注文する',
+        ()=>submitOrder({nickname})
+      );
+    });
+    // Order actions
+    document.getElementById('btn-cancel-order')?.addEventListener('click',cancelOrder);
+    document.getElementById('btn-new-order')?.addEventListener('click',()=>clearMyOrder());
   }
   function bindStaff(){
     document.getElementById('btn-minus')?.addEventListener('click',()=>updateCallCount(-1));
@@ -1349,6 +1614,7 @@
   }
   function bindSettings(){
     document.getElementById('settings-form')?.addEventListener('submit',e=>{e.preventDefault();saveSettings(e.target);});
+    document.getElementById('btn-add-menu-item')?.addEventListener('click',addMenuItem);
     document.querySelectorAll('input[name="theme"]').forEach(inp=>{
       inp.addEventListener('change',()=>{
         applyTheme(parseInt(inp.value));
