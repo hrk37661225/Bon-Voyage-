@@ -23,12 +23,19 @@
     }
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     body{font-family:'Noto Sans JP',-apple-system,'Hiragino Kaku Gothic ProN',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;transition:background .4s}
-    .bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;
-      background:radial-gradient(ellipse 70% 90% at 15% 40%,rgba(var(--glow),.22) 0%,transparent 60%),
-                radial-gradient(ellipse 55% 65% at 88% 18%,rgba(168,212,255,.14) 0%,transparent 60%),
-                radial-gradient(ellipse 45% 55% at 50% 88%,rgba(240,147,43,.07) 0%,transparent 60%);
-      animation:bgBreath 6s ease-in-out infinite alternate}
-    @keyframes bgBreath{from{opacity:.75}to{opacity:1}}
+    .bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+    .bg-blob{position:absolute;border-radius:50%;filter:blur(50px);will-change:transform}
+    .bg-blob1{width:65%;height:55%;left:-15%;top:8%;background:radial-gradient(circle,rgba(var(--glow),.32) 0%,transparent 70%);animation:blobDrift1 17s ease-in-out infinite alternate}
+    .bg-blob2{width:55%;height:48%;right:-15%;top:-4%;background:radial-gradient(circle,rgba(168,212,255,.2) 0%,transparent 70%);animation:blobDrift2 21s ease-in-out infinite alternate}
+    .bg-blob3{width:48%;height:42%;left:22%;bottom:-14%;background:radial-gradient(circle,rgba(240,147,43,.13) 0%,transparent 70%);animation:blobDrift3 25s ease-in-out infinite alternate}
+    @keyframes blobDrift1{from{transform:translate(0,0) scale(1)}to{transform:translate(8%,10%) scale(1.15)}}
+    @keyframes blobDrift2{from{transform:translate(0,0) scale(1)}to{transform:translate(-10%,8%) scale(1.1)}}
+    @keyframes blobDrift3{from{transform:translate(0,0) scale(1)}to{transform:translate(6%,-8%) scale(1.18)}}
+    .stat-icon{display:inline-block;animation:iconFloat 2.6s ease-in-out infinite}
+    @keyframes iconFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+    .btn-order-highlight{position:relative}
+    .btn-order-highlight::before{content:'';position:absolute;inset:-4px;border-radius:18px;border:2px solid rgba(var(--glow),.5);animation:orderPulse 1.8s ease-out infinite;pointer-events:none}
+    @keyframes orderPulse{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.08)}}
     #root{position:relative;z-index:1;min-height:100dvh}
 
     /* Layout */
@@ -124,6 +131,13 @@
     .theme-swatch.selected .theme-preview{border-width:3px!important}
     .theme-dot{width:8px;height:8px;border-radius:50%}
     .theme-name{font-size:10px;color:var(--muted)}
+
+    /* Payment method */
+    .pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .pay-option{padding:16px 10px;border:2px solid var(--border);border-radius:12px;text-align:center;cursor:pointer;transition:all .15s ease}
+    .pay-option.selected{border-color:var(--accent);background:rgba(var(--glow),.1)}
+    .pay-icon{font-size:24px;margin-bottom:6px}
+    .pay-title{font-size:13px;font-weight:700}
 
     /* Stamp */
     .stamp-header{margin-bottom:10px}
@@ -241,7 +255,7 @@
   </style>
 </head>
 <body>
-  <div class="bg-glow"></div>
+  <div class="bg-glow"><div class="bg-blob bg-blob1"></div><div class="bg-blob bg-blob2"></div><div class="bg-blob bg-blob3"></div></div>
   <div id="root"><div class="loader"><div class="spin"></div></div></div>
   <div class="toast" id="toast"></div>
   <div id="generic-modal" class="modal-overlay" style="display:none">
@@ -310,7 +324,7 @@
   let selectedSlot=null;
   let formDraft={nickname:'',age:'',people:'1'};
   let reserveDraft={name:'',age:'',people:'1',idType:''};
-  let orderDraft={nickname:'',items:{}};
+  let orderDraft={nickname:'',items:{},paymentMethod:''};
   let view = INITIAL_MODE === 'display' ? 'display' : INITIAL_MODE === 'staff' ? 'staff' : 'customer';
   let tapCount=0, tapTimer, expireTimer, expireTimerId;
 
@@ -540,6 +554,10 @@
     else orderDraft.items[id]=next;
     render();
   }
+  function selectOrderPayment(method){
+    orderDraft.paymentMethod=method;
+    render();
+  }
   function orderDraftTotal(){
     const items=cfg.menuItems||[];
     return Object.entries(orderDraft.items).reduce((s,[id,qty])=>{
@@ -550,6 +568,7 @@
   async function submitOrder(fd){
     if(!cfg?.isOpen){toast('現在受付を停止しています');return;}
     if(localStorage.getItem('bv_order_id')){toast('すでに注文があります');return;}
+    if(!fd.paymentMethod){toast('お支払い方法を選択してください');return;}
     const menu=cfg.menuItems||[];
     const items=Object.entries(orderDraft.items).filter(([,qty])=>qty>0).map(([id,qty])=>{
       const item=menu.find(m=>m.id===id);
@@ -564,14 +583,14 @@
       const ordersRef=db.collection('orders').doc();
       await Promise.all([
         ordersRef.set({
-          number:num,nickname:fd.nickname,items,total,status:'注文受付',sid,
+          number:num,nickname:fd.nickname,items,total,paymentMethod:fd.paymentMethod,status:'注文受付',sid,
           createdAt:firebase.firestore.FieldValue.serverTimestamp()
         }),
         cfgRef.update({orderNextNumber:firebase.firestore.FieldValue.increment(1)})
       ]);
       localStorage.setItem('bv_order_id',ordersRef.id);
-      myOrder={id:ordersRef.id,number:num,nickname:fd.nickname,items,total,status:'注文受付'};
-      orderDraft={nickname:'',items:{}};
+      myOrder={id:ordersRef.id,number:num,nickname:fd.nickname,items,total,paymentMethod:fd.paymentMethod,status:'注文受付'};
+      orderDraft={nickname:'',items:{},paymentMethod:''};
       customerSubView='home';
       render();
       listenMyOrder(ordersRef.id);
@@ -612,6 +631,16 @@
       staffOrders=s.docs.map(d=>({id:d.id,...d.data()}));
       if(view==='staff')render();
     });
+  }
+  function computeSalesStats(){
+    const valid=staffOrders.filter(o=>o.status!=='cancelled');
+    const totalRevenue=valid.reduce((s,o)=>s+(o.total||0),0);
+    const cashRevenue=valid.filter(o=>o.paymentMethod==='現金').reduce((s,o)=>s+(o.total||0),0);
+    const cashlessRevenue=valid.filter(o=>o.paymentMethod==='キャッシュレス').reduce((s,o)=>s+(o.total||0),0);
+    const itemCounts={};
+    valid.forEach(o=>(o.items||[]).forEach(i=>{itemCounts[i.name]=(itemCounts[i.name]||0)+i.qty;}));
+    const topItems=Object.entries(itemCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    return {totalRevenue,cashRevenue,cashlessRevenue,orderCount:valid.length,topItems};
   }
   async function advanceOrderStatus(id){
     const o=staffOrders.find(o=>o.id===id);
@@ -1002,13 +1031,13 @@
       <div class="card" style="padding:22px 8px 18px;border:1px solid rgba(var(--glow),.32);box-shadow:0 0 34px rgba(var(--glow),.16)">
         <div style="display:flex;align-items:stretch">
           <div style="flex:1;text-align:center;padding:4px 2px">
-            <div style="font-size:20px;margin-bottom:4px">👥</div>
+            <div class="stat-icon" style="font-size:20px;margin-bottom:4px">👥</div>
             <div style="font-family:var(--font-num);font-size:34px;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(var(--glow),.55))">${waitCount}</div>
             <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">今、並んでいる人数</div>
           </div>
           <div style="width:1px;background:var(--border);margin:2px 0"></div>
           <div style="flex:1;text-align:center;padding:4px 2px">
-            <div style="font-size:20px;margin-bottom:4px">⏱️</div>
+            <div class="stat-icon" style="font-size:20px;margin-bottom:4px">⏱️</div>
             <div style="font-family:var(--font-num);font-size:34px;font-weight:900;line-height:1.15;white-space:nowrap;background:linear-gradient(135deg,${waitRangeColor(estMin)[0]},${waitRangeColor(estMin)[1]});-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px ${waitRangeColor(estMin)[1]}80)">${waitRangeLabel(estMin)}</div>
             <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">呼ばれるまでの目安</div>
           </div>
@@ -1028,20 +1057,23 @@
       <div class="card" style="padding:22px 8px 18px;border:1px solid rgba(var(--glow),.32);box-shadow:0 0 34px rgba(var(--glow),.16)">
         <div style="display:flex;align-items:stretch">
           <div style="flex:1;text-align:center;padding:4px 2px">
-            <div style="font-size:20px;margin-bottom:4px">🍳</div>
+            <div class="stat-icon" style="font-size:20px;margin-bottom:4px">🍳</div>
             <div style="font-family:var(--font-num);font-size:34px;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(var(--glow),.55))">${cookingCount}</div>
             <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">今、調理待ちの件数</div>
           </div>
           <div style="width:1px;background:var(--border);margin:2px 0"></div>
           <div style="flex:1;text-align:center;padding:4px 2px">
-            <div style="font-size:20px;margin-bottom:4px">⏱️</div>
+            <div class="stat-icon" style="font-size:20px;margin-bottom:4px">⏱️</div>
             <div style="font-family:var(--font-num);font-size:34px;font-weight:900;line-height:1.15;white-space:nowrap;background:linear-gradient(135deg,${waitRangeColor(estOrderMin)[0]},${waitRangeColor(estOrderMin)[1]});-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px ${waitRangeColor(estOrderMin)[1]}80)">${waitRangeLabel(estOrderMin)}</div>
             <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">受け取りまでの目安</div>
           </div>
         </div>
         <div style="text-align:center;font-size:10.5px;color:var(--muted);border-top:1px solid var(--border);margin-top:16px;padding-top:10px">目安です。前後する場合があります</div>
       </div>
-      <button class="btn btn-rainbow" id="btn-to-order" ${!cfg.isOpen?'disabled':''} style="margin-top:16px">🍜 商品を注文する</button>
+      <div style="text-align:center;font-size:12px;font-weight:700;color:var(--accent2);margin-top:16px;margin-bottom:8px">↓ ここから注文できます</div>
+      <div class="btn-order-highlight">
+        <button class="btn btn-rainbow" id="btn-to-order" ${!cfg.isOpen?'disabled':''}>🍜 商品を注文する</button>
+      </div>
       ${ticketStatCard}
       ${ticketButton}
       ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
@@ -1195,11 +1227,22 @@
             </div>`;
           }).join('')}
       </div>
+      <div class="card">
+        <div class="sec">お支払い方法 *</div>
+        <div class="pay-grid">
+          <div class="pay-option ${orderDraft.paymentMethod==='現金'?'selected':''}" onclick="selectOrderPayment('現金')">
+            <div class="pay-icon">💵</div><div class="pay-title">現金</div>
+          </div>
+          <div class="pay-option ${orderDraft.paymentMethod==='キャッシュレス'?'selected':''}" onclick="selectOrderPayment('キャッシュレス')">
+            <div class="pay-icon">📱</div><div class="pay-title">キャッシュレス</div>
+          </div>
+        </div>
+      </div>
       <div class="card" style="text-align:center">
         <div style="font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:6px">合計</div>
         <div style="font-family:var(--font-num);font-size:36px;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">¥${total}</div>
       </div>
-      <button class="btn btn-primary" id="btn-submit-order" ${total<=0?'disabled':''}>注文する</button>
+      <button class="btn btn-primary" id="btn-submit-order" ${(total<=0||!orderDraft.paymentMethod)?'disabled':''}>注文する</button>
       <button class="btn btn-ghost" id="btn-back-home" style="margin-top:10px">← 戻る</button>
     </div>`;
   }
@@ -1227,6 +1270,7 @@
       <div class="card">
         <div class="sec">注文内容 (${o.nickname}さん)</div>
         ${o.items.map(i=>`<div class="row"><div class="row-label">${i.name} ×${i.qty}</div><div class="row-value">¥${i.price*i.qty}</div></div>`).join('')}
+        ${o.paymentMethod?`<div class="row"><div class="row-label">お支払い方法</div><div class="row-value">${o.paymentMethod==='現金'?'💵':'📱'} ${o.paymentMethod}</div></div>`:''}
         <div class="row" style="border-top:1px solid var(--border);margin-top:4px;padding-top:10px">
           <div class="row-label" style="font-weight:700">合計</div><div class="row-value" style="color:var(--accent2)">¥${o.total}</div>
         </div>
@@ -1429,6 +1473,29 @@
               </div>`).join('')}
             `).join('')}
       </div>`:''}
+      ${(cfg.menuItems&&cfg.menuItems.length>0)?(()=>{
+        const s=computeSalesStats();
+        const cashPct=s.totalRevenue>0?Math.round(s.cashRevenue/s.totalRevenue*100):0;
+        const cashlessPct=100-cashPct;
+        return `<div class="card">
+          <div class="sec">💰 売上レポート</div>
+          <div class="stats-row" style="margin-bottom:14px">
+            <div class="stat-box"><div class="stat-num" style="color:var(--accent2)">¥${s.totalRevenue}</div><div class="stat-label">総売上</div></div>
+            <div class="stat-box"><div class="stat-num" style="color:var(--accent3)">${s.orderCount}</div><div class="stat-label">注文件数</div></div>
+          </div>
+          ${s.totalRevenue>0?`<div style="margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-bottom:6px">
+              <span>💵 現金 ¥${s.cashRevenue}</span><span>📱 キャッシュレス ¥${s.cashlessRevenue}</span>
+            </div>
+            <div style="display:flex;height:10px;border-radius:100px;overflow:hidden;background:var(--surface2)">
+              <div style="width:${cashPct}%;background:linear-gradient(90deg,var(--accent),var(--accent2))"></div>
+              <div style="width:${cashlessPct}%;background:rgba(var(--glow),.3)"></div>
+            </div>
+          </div>`:''}
+          ${s.topItems.length>0?`<div class="sec" style="margin-top:2px">人気商品ランキング</div>
+            ${s.topItems.map(([name,qty],i)=>`<div class="row"><div class="row-label">${i+1}. ${name}</div><div class="row-value">${qty}個</div></div>`).join('')}`:'<div class="empty-msg">まだ売上データがありません</div>'}
+        </div>`;
+      })():''}
       ${(cfg.menuItems&&cfg.menuItems.length>0)?`<div class="card">
         <div class="sec">🍜 注文一覧 (${staffOrders.filter(o=>o.status!=='cancelled').length}件)</div>
         <div class="queue-scroll" style="max-height:320px">
@@ -1439,7 +1506,7 @@
                 <div class="stk-num">No.${pad(o.number)}</div>
                 <div class="stk-info">
                   <div class="stk-name">${o.nickname} <span style="font-weight:400;font-size:11px;color:var(--muted)">¥${o.total}</span></div>
-                  <div class="stk-meta">${o.items.map(i=>`${i.name}×${i.qty}`).join('、')}</div>
+                  <div class="stk-meta">${o.items.map(i=>`${i.name}×${i.qty}`).join('、')} ${o.paymentMethod?(o.paymentMethod==='現金'?'💵':'📱'):''}</div>
                 </div>
                 <span class="stk-badge ${o.status==='受取済み'?'done':'waiting'}">${o.status}</span>
                 <div style="display:flex;flex-direction:column;gap:4px;margin-left:4px">
@@ -1623,6 +1690,7 @@
     document.getElementById('btn-submit-order')?.addEventListener('click',()=>{
       const nickname=(document.getElementById('inp-order-nickname')?.value||'').trim();
       if(!nickname){toast('ニックネームを入力してください');return;}
+      if(!orderDraft.paymentMethod){toast('お支払い方法を選択してください');return;}
       orderDraft.nickname=nickname;
       const menu=cfg.menuItems||[];
       const lines=Object.entries(orderDraft.items).filter(([,qty])=>qty>0).map(([id,qty])=>{
@@ -1633,12 +1701,12 @@
       showConfirm(
         '注文しますか？',
         `<div style="background:rgba(255,255,255,.04);border-radius:12px;padding:12px 14px;margin-bottom:10px">
-          <div style="font-size:15px;font-weight:700;margin-bottom:8px">${nickname}</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:8px">${nickname} <span style="font-weight:400;font-size:12px;color:var(--muted)">（${orderDraft.paymentMethod}）</span></div>
           ${lines}
           <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:700"><span>合計</span><span>¥${total}</span></div>
         </div>`,
         '注文する',
-        ()=>submitOrder({nickname})
+        ()=>submitOrder({nickname,paymentMethod:orderDraft.paymentMethod})
       );
     });
     // Order actions
