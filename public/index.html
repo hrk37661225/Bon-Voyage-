@@ -304,7 +304,7 @@
   let cfg=null, myTicket=null, tickets=[], isStaff=false;
   let reservations=[], myReservation=null;
   let staffTickets=[], staffTicketsUnsub=null;
-  let myOrder=null, staffOrders=[], staffOrdersUnsub=null;
+  let myOrder=null, orders=[], staffOrders=[], staffOrdersUnsub=null;
   let modalCallback=null;
   let customerSubView='home'; // home | walkinForm | reserveSlots | reserveForm | orderMenu
   let selectedSlot=null;
@@ -356,7 +356,7 @@
       if (!s.exists) {
         await cfgRef.set({isOpen:true,nextNumber:1,maxCallCount:30,
           storeName:'Bon Voyage',slogan:'旅へ出よう',location:'中庭',theme:0,
-          expireMinutes:5,minutesPerPerson:3,
+          expireMinutes:5,minutesPerPerson:3,minutesPerOrder:4,
           reservationEnabled:false,slotsPerHour:10,openHour:10,closeHour:16,
           autoCallEnabled:true,menuItems:[],orderNextNumber:1});
         await db.collection('secrets').doc('staff').set({password:'1234'});
@@ -390,6 +390,10 @@
     });
     db.collection('reservations').where('status','in',['reserved','arrived']).orderBy('slotId','asc').onSnapshot(s=>{
       reservations=s.docs.map(d=>({id:d.id,...d.data()}));
+      render();
+    });
+    db.collection('orders').where('status','in',['注文受付','調理中']).orderBy('number','asc').onSnapshot(s=>{
+      orders=s.docs.map(d=>({id:d.id,...d.data()}));
       render();
     });
     const saved=localStorage.getItem('bv_ticket_id');
@@ -776,6 +780,7 @@
       maxCallCount:parseInt(f.maxCallCount.value)||30,
       expireMinutes:parseInt(f.expireMinutes.value)||5,
       minutesPerPerson:parseFloat(f.minutesPerPerson.value)||3,
+      minutesPerOrder:parseFloat(f.minutesPerOrder.value)||4,
       autoCallEnabled:document.getElementById('inp-autocall-enabled')?.checked!==false,
       reservationEnabled:document.getElementById('inp-resv-enabled')?.checked||false,
       openHour:parseInt(f.openHour.value)??10,
@@ -984,15 +989,16 @@
     const waitCount=waitList.length;
     const mpp=cfg.minutesPerPerson||3;
     const estMin=Math.round(waitCount*mpp);
+    const hasMenu=cfg.menuItems&&cfg.menuItems.length>0;
+    const cookingCount=orders.length;
+    const mpo=cfg.minutesPerOrder||4;
+    const estOrderMin=Math.round(cookingCount*mpo);
     const logoTap=`onclick="handleTap()"`;
-    return `<div class="page">
-      <div class="header">
-        <div class="badge">BON VOYAGE</div>
-        <h1>${sn}</h1>
-        ${cfg.slogan?`<p class="store-sub">${cfg.slogan}</p>`:''}
-        ${cfg.location?`<p class="store-loc">📍 ${cfg.location}</p>`:''}
-      </div>
-      ${!cfg.isOpen?`<div class="card warn" style="text-align:center;margin-bottom:14px"><div style="font-weight:700;color:var(--warning)">現在受付を停止しています</div><div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div></div>`:''}
+    const ticketStatCard=hasMenu?`
+      <div class="card" style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:12.5px;color:var(--muted)">🎫 整理券：<strong style="color:var(--text)">${waitCount}人待ち</strong></div>
+        <div style="font-size:12.5px;color:var(--muted)">目安 <strong style="color:${waitRangeColor(estMin)[1]}">${waitRangeLabel(estMin)}</strong></div>
+      </div>`:`
       <div class="card" style="padding:22px 8px 18px;border:1px solid rgba(var(--glow),.32);box-shadow:0 0 34px rgba(var(--glow),.16)">
         <div style="display:flex;align-items:stretch">
           <div style="flex:1;text-align:center;padding:4px 2px">
@@ -1008,10 +1014,42 @@
           </div>
         </div>
         <div style="text-align:center;font-size:10.5px;color:var(--muted);border-top:1px solid var(--border);margin-top:16px;padding-top:10px">目安です。前後する場合があります</div>
+      </div>`;
+    const ticketButton=`<button class="btn ${hasMenu?'btn-primary':'btn-rainbow'}" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="margin-top:${hasMenu?'10':'16'}px">整理券を取る</button>`;
+    return `<div class="page">
+      <div class="header">
+        <div class="badge">BON VOYAGE</div>
+        <h1>${sn}</h1>
+        ${cfg.slogan?`<p class="store-sub">${cfg.slogan}</p>`:''}
+        ${cfg.location?`<p class="store-loc">📍 ${cfg.location}</p>`:''}
       </div>
-      <button class="btn btn-rainbow" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="margin-top:16px">整理券を取る</button>
+      ${!cfg.isOpen?`<div class="card warn" style="text-align:center;margin-bottom:14px"><div style="font-weight:700;color:var(--warning)">現在受付を停止しています</div><div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div></div>`:''}
+      ${hasMenu?`
+      <div class="card" style="padding:22px 8px 18px;border:1px solid rgba(var(--glow),.32);box-shadow:0 0 34px rgba(var(--glow),.16)">
+        <div style="display:flex;align-items:stretch">
+          <div style="flex:1;text-align:center;padding:4px 2px">
+            <div style="font-size:20px;margin-bottom:4px">🍳</div>
+            <div style="font-family:var(--font-num);font-size:34px;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(var(--glow),.55))">${cookingCount}</div>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">今、調理待ちの件数</div>
+          </div>
+          <div style="width:1px;background:var(--border);margin:2px 0"></div>
+          <div style="flex:1;text-align:center;padding:4px 2px">
+            <div style="font-size:20px;margin-bottom:4px">⏱️</div>
+            <div style="font-family:var(--font-num);font-size:34px;font-weight:900;line-height:1.15;white-space:nowrap;background:linear-gradient(135deg,${waitRangeColor(estOrderMin)[0]},${waitRangeColor(estOrderMin)[1]});-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px ${waitRangeColor(estOrderMin)[1]}80)">${waitRangeLabel(estOrderMin)}</div>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">受け取りまでの目安</div>
+          </div>
+        </div>
+        <div style="text-align:center;font-size:10.5px;color:var(--muted);border-top:1px solid var(--border);margin-top:16px;padding-top:10px">目安です。前後する場合があります</div>
+      </div>
+      <button class="btn btn-rainbow" id="btn-to-order" ${!cfg.isOpen?'disabled':''} style="margin-top:16px">🍜 商品を注文する</button>
+      ${ticketStatCard}
+      ${ticketButton}
       ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
-      ${(cfg.menuItems&&cfg.menuItems.length>0)?`<button class="btn btn-primary" id="btn-to-order" style="margin-top:10px">🍜 商品を注文する</button>`:''}
+      `:`
+      ${ticketStatCard}
+      ${ticketButton}
+      ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
+      `}
       <div class="center" style="margin-top:30px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
       <div class="center" style="margin-top:8px"><a class="link" href="?mode=display" target="_blank">📺 表示ボードを開く</a></div>
     </div>`;
@@ -1474,6 +1512,7 @@
             <input class="field-input" id="inp-menu-price" type="number" placeholder="価格" min="1" style="flex:1" inputmode="numeric">
           </div>
           <button type="button" class="btn btn-ghost" id="btn-add-menu-item" style="margin-top:10px">＋ 商品を追加</button>
+          <div class="field" style="margin-top:14px;margin-bottom:0"><label class="field-label">1件あたりの目安調理時間（分）</label><input class="field-input" name="minutesPerOrder" type="number" min="0.5" max="30" step="0.5" value="${cfg.minutesPerOrder||4}"><div style="font-size:11px;color:var(--muted);margin-top:4px">受け取りまでの目安時間の計算に使います</div></div>
         </div>
         <div class="card">
           <div class="sec">テーマ（背景・カラー）</div>
