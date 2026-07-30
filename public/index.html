@@ -11,31 +11,45 @@
   <meta name="theme-color" content="#0d3a63">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Outfit:wght@600;700;800;900&family=Shippori+Mincho:wght@700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Outfit:wght@600;700;800;900&family=Shippori+Mincho:wght@700;800&family=Playfair+Display:ital,wght@1,700;1,800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:#0a0612; --surface:rgba(255,255,255,.045); --surface2:rgba(255,255,255,.08);
-      --border:rgba(255,255,255,.1); --accent:#a8d4ff; --accent2:#5b8def;
-      --accent3:#7ef2c0; --warning:#fdcb6e; --danger:#9498c4;
-      --text:#f4eefc; --muted:#8b7fa8; --glow:91,141,239;
+      --bg:#160402; --surface:rgba(20,60,110,.1); --surface2:rgba(20,60,110,.16);
+      --border:rgba(95,208,255,.16); --accent:#5fd0ff; --accent2:#f4c95d;
+      --accent3:#4ade80; --warning:#fdcb6e; --danger:#9498c4;
+      --text:#f4eefc; --muted:#b8a89a; --glow:20,60,110;
       --font-head:'Shippori Mincho','Zen Kaku Gothic New','Noto Sans JP',-apple-system,serif;
       --font-num:'Outfit','Noto Sans JP',sans-serif;
+      --font-script:'Playfair Display',serif;
+      --navy:#0a1f38; --navy2:#0d2a4a; --gold:#f4c95d; --gold2:#c9932e;
     }
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    body{font-family:'Noto Sans JP',-apple-system,'Hiragino Kaku Gothic ProN',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;transition:background .4s}
+    body{font-family:'Noto Sans JP',-apple-system,'Hiragino Kaku Gothic ProN',sans-serif;background:radial-gradient(ellipse 140% 90% at 50% 115%,#ff7a1a 0%,#c8420f 28%,#4a1206 58%,#160402 100%);color:var(--text);min-height:100dvh;transition:background .4s}
     .bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
     .bg-blob{position:absolute;border-radius:50%;filter:blur(50px);will-change:transform}
-    .bg-blob1{width:65%;height:55%;left:-15%;top:8%;background:radial-gradient(circle,rgba(var(--glow),.32) 0%,transparent 70%);animation:blobDrift1 17s ease-in-out infinite alternate}
-    .bg-blob2{width:55%;height:48%;right:-15%;top:-4%;background:radial-gradient(circle,rgba(168,212,255,.2) 0%,transparent 70%);animation:blobDrift2 21s ease-in-out infinite alternate}
-    .bg-blob3{width:48%;height:42%;left:22%;bottom:-14%;background:radial-gradient(circle,rgba(240,147,43,.13) 0%,transparent 70%);animation:blobDrift3 25s ease-in-out infinite alternate}
+    .bg-blob1{width:65%;height:55%;left:-15%;top:8%;background:radial-gradient(circle,rgba(95,208,255,.22) 0%,transparent 70%);animation:blobDrift1 17s ease-in-out infinite alternate}
+    .bg-blob2{width:55%;height:48%;right:-15%;top:-4%;background:radial-gradient(circle,rgba(244,201,93,.16) 0%,transparent 70%);animation:blobDrift2 21s ease-in-out infinite alternate}
+    .bg-blob3{width:48%;height:42%;left:22%;bottom:-14%;background:radial-gradient(circle,rgba(255,122,26,.18) 0%,transparent 70%);animation:blobDrift3 25s ease-in-out infinite alternate}
+    .bg-sparkle{position:absolute;inset:0;
+      background:
+        radial-gradient(1.5px 1.5px at 12% 22%,rgba(255,255,255,.8),transparent),
+        radial-gradient(1px 1px at 28% 68%,rgba(255,255,255,.6),transparent),
+        radial-gradient(2px 2px at 42% 15%,rgba(255,255,255,.7),transparent),
+        radial-gradient(1px 1px at 58% 42%,rgba(255,255,255,.5),transparent),
+        radial-gradient(1.5px 1.5px at 72% 78%,rgba(255,255,255,.75),transparent),
+        radial-gradient(1px 1px at 85% 30%,rgba(255,255,255,.6),transparent),
+        radial-gradient(2px 2px at 91% 60%,rgba(255,255,255,.65),transparent),
+        radial-gradient(1px 1px at 18% 85%,rgba(255,255,255,.5),transparent),
+        radial-gradient(1.5px 1.5px at 65% 90%,rgba(255,255,255,.6),transparent),
+        radial-gradient(1px 1px at 8% 50%,rgba(255,255,255,.4),transparent);
+      animation:bgBreath 4s ease-in-out infinite alternate}
+    @keyframes bgBreath{from{opacity:.5}to{opacity:1}}
     @keyframes blobDrift1{from{transform:translate(0,0) scale(1)}to{transform:translate(8%,10%) scale(1.15)}}
     @keyframes blobDrift2{from{transform:translate(0,0) scale(1)}to{transform:translate(-10%,8%) scale(1.1)}}
     @keyframes blobDrift3{from{transform:translate(0,0) scale(1)}to{transform:translate(6%,-8%) scale(1.18)}}
     .stat-icon{display:inline-block;animation:iconFloat 2.6s ease-in-out infinite}
     @keyframes iconFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-    .btn-order-highlight{position:relative}
-    .btn-order-highlight::before{content:'';position:absolute;inset:-4px;border-radius:18px;border:2px solid rgba(var(--glow),.5);animation:orderPulse 1.8s ease-out infinite;pointer-events:none}
-    @keyframes orderPulse{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.08)}}
+    .header-anchor{font-size:20px;color:rgba(255,255,255,.55);margin-bottom:10px}
     #root{position:relative;z-index:1;min-height:100dvh}
 
     /* Layout */
@@ -255,7 +269,7 @@
   </style>
 </head>
 <body>
-  <div class="bg-glow"><div class="bg-blob bg-blob1"></div><div class="bg-blob bg-blob2"></div><div class="bg-blob bg-blob3"></div></div>
+  <div class="bg-glow"><div class="bg-blob bg-blob1"></div><div class="bg-blob bg-blob2"></div><div class="bg-blob bg-blob3"></div><div class="bg-sparkle"></div></div>
   <div id="root"><div class="loader"><div class="spin"></div></div></div>
   <div class="toast" id="toast"></div>
   <div id="generic-modal" class="modal-overlay" style="display:none">
@@ -273,7 +287,7 @@
   <script>
   // ── Themes ────────────────────────────────────────
   const THEMES = [
-    {name:'パステル',  bg:'#0a0612',a1:'#a8d4ff',a2:'#5b8def',a3:'#7ef2c0',glow:'91,141,239'},
+    {name:'サンライズ',bg:'radial-gradient(ellipse 140% 90% at 50% 115%,#ff7a1a 0%,#c8420f 28%,#4a1206 58%,#160402 100%)',a1:'#5fd0ff',a2:'#f4c95d',a3:'#4ade80',glow:'20,60,110'},
     {name:'オーシャン',bg:'#030d1a',a1:'#00b4d8',a2:'#90e0ef',a3:'#48cae4',glow:'0,180,216'},
     {name:'フォレスト',bg:'#071a07',a1:'#52b788',a2:'#95d5b2',a3:'#d8f3dc',glow:'82,183,136'},
     {name:'サンセット',bg:'#1a0805',a1:'#e63946',a2:'#ff8166',a3:'#ffd166',glow:'230,57,70'},
@@ -1080,65 +1094,74 @@
     const totalWaitSecs=orders.reduce((s,o)=>s+(o.items||[]).reduce((s2,i)=>s2+(i.waitSecs||60)*i.qty,0),0);
     const estOrderMin=Math.round(totalWaitSecs/60);
     const logoTap=`onclick="handleTap()"`;
-    const ticketStatCard=hasMenu?`
-      <div class="card" style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between">
-        <div style="font-size:12.5px;color:var(--muted)">🎫 整理券：<strong style="color:var(--text)">${waitCount}人待ち</strong></div>
-        <div style="font-size:12.5px;color:var(--muted)">目安 <strong style="color:${waitRangeColor(estMin)[1]}">${waitRangeLabel(estMin)}</strong></div>
-      </div>`:`
-      <div class="card" style="padding:22px 8px 18px;border:1px solid rgba(var(--glow),.32);box-shadow:0 0 34px rgba(var(--glow),.16)">
+    // Hero stat card: order stats when a menu exists, otherwise ticket stats — navy/gold "stall" styling either way
+    const heroCard=hasMenu?`
+      <div class="card" style="text-align:center;padding:26px 20px 22px;background:linear-gradient(160deg,var(--navy2),var(--navy));border:1px solid rgba(95,208,255,.28);box-shadow:0 0 30px rgba(95,208,255,.1)">
+        <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:6px">
+          <span style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;animation:blink 1.1s ease infinite"></span>ただいま受付中
+        </div>
         <div style="display:flex;align-items:stretch">
-          <div style="flex:1;text-align:center;padding:4px 2px">
-            <div class="stat-icon" style="font-size:20px;margin-bottom:4px">👥</div>
-            <div style="font-family:var(--font-num);font-size:34px;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(var(--glow),.55))">${waitCount}</div>
-            <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">今、並んでいる人数</div>
+          <div style="flex:1;text-align:center">
+            <div class="stat-icon" style="font-size:20px;margin-bottom:4px">🍳</div>
+            <div style="font-family:var(--font-num);font-size:36px;font-weight:900;line-height:1;white-space:nowrap;color:var(--accent);text-shadow:0 0 22px rgba(95,208,255,.5)">${cookingCount}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:8px;font-weight:700">調理待ちの件数</div>
           </div>
-          <div style="width:1px;background:var(--border);margin:2px 0"></div>
-          <div style="flex:1;text-align:center;padding:4px 2px">
+          <div style="width:1px;background:rgba(255,255,255,.14);margin:2px 0"></div>
+          <div style="flex:1;text-align:center">
             <div class="stat-icon" style="font-size:20px;margin-bottom:4px">⏱️</div>
-            <div style="font-family:var(--font-num);font-size:34px;font-weight:900;line-height:1.15;white-space:nowrap;background:linear-gradient(135deg,${waitRangeColor(estMin)[0]},${waitRangeColor(estMin)[1]});-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px ${waitRangeColor(estMin)[1]}80)">${waitRangeLabel(estMin)}</div>
-            <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">呼ばれるまでの目安</div>
+            <div style="font-family:var(--font-num);font-size:30px;font-weight:900;line-height:1.2;white-space:nowrap;color:var(--gold);text-shadow:0 0 20px rgba(244,201,93,.5)">${waitRangeLabel(estOrderMin)}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:8px;font-weight:700">受け取りまでの目安</div>
           </div>
         </div>
-        <div style="text-align:center;font-size:10.5px;color:var(--muted);border-top:1px solid var(--border);margin-top:16px;padding-top:10px">目安です。前後する場合があります</div>
+        <div style="text-align:center;font-size:10.5px;color:rgba(255,255,255,.4);border-top:1px solid rgba(255,255,255,.12);margin-top:16px;padding-top:10px">目安です。前後する場合があります</div>
+      </div>`:`
+      <div class="card" style="text-align:center;padding:26px 20px 22px;background:linear-gradient(160deg,var(--navy2),var(--navy));border:1px solid rgba(95,208,255,.28);box-shadow:0 0 30px rgba(95,208,255,.1)">
+        <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:6px">
+          <span style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;animation:blink 1.1s ease infinite"></span>ただいま受付中
+        </div>
+        <div style="display:flex;align-items:stretch">
+          <div style="flex:1;text-align:center">
+            <div class="stat-icon" style="font-size:20px;margin-bottom:4px">👥</div>
+            <div style="font-family:var(--font-num);font-size:36px;font-weight:900;line-height:1;white-space:nowrap;color:var(--accent);text-shadow:0 0 22px rgba(95,208,255,.5)">${waitCount}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:8px;font-weight:700">今、並んでいる人数</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,.14);margin:2px 0"></div>
+          <div style="flex:1;text-align:center">
+            <div class="stat-icon" style="font-size:20px;margin-bottom:4px">⏱️</div>
+            <div style="font-family:var(--font-num);font-size:30px;font-weight:900;line-height:1.2;white-space:nowrap;color:var(--gold);text-shadow:0 0 20px rgba(244,201,93,.5)">${waitRangeLabel(estMin)}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:8px;font-weight:700">呼ばれるまでの目安</div>
+          </div>
+        </div>
+        <div style="text-align:center;font-size:10.5px;color:rgba(255,255,255,.4);border-top:1px solid rgba(255,255,255,.12);margin-top:16px;padding-top:10px">目安です。前後する場合があります</div>
       </div>`;
-    const ticketButton=`<button class="btn ${hasMenu?'btn-primary':'btn-rainbow'}" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="margin-top:${hasMenu?'10':'16'}px">整理券を取る</button>`;
+    const primaryCta=hasMenu?`
+      <div class="card" style="margin-top:14px;text-align:center;padding:20px 20px 22px;background:linear-gradient(160deg,var(--navy2),var(--navy));border:1px solid rgba(244,201,93,.22)">
+        <div style="font-family:var(--font-script);font-style:italic;font-weight:700;font-size:18px;color:#fff;opacity:.85;margin-bottom:12px">Please Order</div>
+        <button class="btn" id="btn-to-order" ${!cfg.isOpen?'disabled':''} style="background:linear-gradient(135deg,var(--gold),var(--gold2));color:#2b1600;font-weight:900;box-shadow:0 6px 20px rgba(244,201,93,.25)">▶ タップして注文する</button>
+      </div>
+      <div class="card" style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+        <div style="font-size:12.5px;color:var(--muted)">🎫 整理券：<strong style="color:var(--text)">${waitCount}人待ち</strong></div>
+        <div style="font-size:12.5px;color:var(--muted)">目安 <strong style="color:var(--gold)">${waitRangeLabel(estMin)}</strong></div>
+      </div>
+      <button class="btn btn-primary" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="margin-top:10px">整理券を取る</button>
+      ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
+      `:`
+      <div class="card" style="margin-top:14px;text-align:center;padding:20px 20px 22px;background:linear-gradient(160deg,var(--navy2),var(--navy));border:1px solid rgba(244,201,93,.22)">
+        <div style="font-family:var(--font-script);font-style:italic;font-weight:700;font-size:18px;color:#fff;opacity:.85;margin-bottom:12px">Please Take a Ticket</div>
+        <button class="btn" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="background:linear-gradient(135deg,var(--gold),var(--gold2));color:#2b1600;font-weight:900;box-shadow:0 6px 20px rgba(244,201,93,.25)">▶ タップして整理券を取る</button>
+      </div>
+      ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
+      `;
     return `<div class="page">
       <div class="header">
-        <div class="badge">BON VOYAGE</div>
+        <div class="header-anchor">⚓</div>
         <h1>${sn}</h1>
         ${cfg.slogan?`<p class="store-sub">${cfg.slogan}</p>`:''}
         ${cfg.location?`<p class="store-loc">📍 ${cfg.location}</p>`:''}
       </div>
       ${!cfg.isOpen?`<div class="card warn" style="text-align:center;margin-bottom:14px"><div style="font-weight:700;color:var(--warning)">現在受付を停止しています</div><div style="font-size:12px;color:var(--muted);margin-top:4px">スタッフにお声がけください</div></div>`:''}
-      ${hasMenu?`
-      <div class="card" style="padding:22px 8px 18px;border:1px solid rgba(var(--glow),.32);box-shadow:0 0 34px rgba(var(--glow),.16)">
-        <div style="display:flex;align-items:stretch">
-          <div style="flex:1;text-align:center;padding:4px 2px">
-            <div class="stat-icon" style="font-size:20px;margin-bottom:4px">🍳</div>
-            <div style="font-family:var(--font-num);font-size:34px;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(var(--glow),.55))">${cookingCount}</div>
-            <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">今、調理待ちの件数</div>
-          </div>
-          <div style="width:1px;background:var(--border);margin:2px 0"></div>
-          <div style="flex:1;text-align:center;padding:4px 2px">
-            <div class="stat-icon" style="font-size:20px;margin-bottom:4px">⏱️</div>
-            <div style="font-family:var(--font-num);font-size:34px;font-weight:900;line-height:1.15;white-space:nowrap;background:linear-gradient(135deg,${waitRangeColor(estOrderMin)[0]},${waitRangeColor(estOrderMin)[1]});-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px ${waitRangeColor(estOrderMin)[1]}80)">${waitRangeLabel(estOrderMin)}</div>
-            <div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:700">受け取りまでの目安</div>
-          </div>
-        </div>
-        <div style="text-align:center;font-size:10.5px;color:var(--muted);border-top:1px solid var(--border);margin-top:16px;padding-top:10px">目安です。前後する場合があります</div>
-      </div>
-      <div style="text-align:center;font-size:12px;font-weight:700;color:var(--accent2);margin-top:16px;margin-bottom:8px">↓ ここから注文できます</div>
-      <div class="btn-order-highlight">
-        <button class="btn btn-rainbow" id="btn-to-order" ${!cfg.isOpen?'disabled':''}>🍜 商品を注文する</button>
-      </div>
-      ${ticketStatCard}
-      ${ticketButton}
-      ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
-      `:`
-      ${ticketStatCard}
-      ${ticketButton}
-      ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
-      `}
+      ${heroCard}
+      ${primaryCta}
       <div class="center" style="margin-top:30px"><span class="bv-logo" ${logoTap}>✦ BON VOYAGE ✦</span></div>
       <div class="center" style="margin-top:8px"><a class="link" href="?mode=display" target="_blank">📺 表示ボードを開く</a></div>
     </div>`;
