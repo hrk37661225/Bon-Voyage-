@@ -1094,63 +1094,39 @@
     const totalWaitSecs=orders.reduce((s,o)=>s+(o.items||[]).reduce((s2,i)=>s2+(i.waitSecs||60)*i.qty,0),0);
     const estOrderMin=Math.round(totalWaitSecs/60);
     const logoTap=`onclick="handleTap()"`;
-    // Hero stat card: order stats when a menu exists, otherwise ticket stats — navy/gold "stall" styling either way
+    // Single-focus hero stat card (stall style): one big number, one small caption below
     const heroCard=hasMenu?`
-      <div class="card" style="text-align:center;padding:26px 20px 22px;background:linear-gradient(160deg,var(--navy2),var(--navy));border:1px solid rgba(95,208,255,.28);box-shadow:0 0 30px rgba(95,208,255,.1)">
-        <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:6px">
+      <div class="card" style="text-align:center;padding:24px 20px 20px;background:linear-gradient(160deg,var(--navy2),var(--navy));border:1px solid rgba(95,208,255,.28);box-shadow:0 0 30px rgba(95,208,255,.1)">
+        <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px">
           <span style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;animation:blink 1.1s ease infinite"></span>ただいま受付中
         </div>
-        <div style="display:flex;align-items:stretch">
-          <div style="flex:1;text-align:center">
-            <div class="stat-icon" style="font-size:20px;margin-bottom:4px">🍳</div>
-            <div style="font-family:var(--font-num);font-size:36px;font-weight:900;line-height:1;white-space:nowrap;color:var(--accent);text-shadow:0 0 22px rgba(95,208,255,.5)">${cookingCount}</div>
-            <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:8px;font-weight:700">調理待ちの件数</div>
-          </div>
-          <div style="width:1px;background:rgba(255,255,255,.14);margin:2px 0"></div>
-          <div style="flex:1;text-align:center">
-            <div class="stat-icon" style="font-size:20px;margin-bottom:4px">⏱️</div>
-            <div style="font-family:var(--font-num);font-size:30px;font-weight:900;line-height:1.2;white-space:nowrap;color:var(--gold);text-shadow:0 0 20px rgba(244,201,93,.5)">${waitRangeLabel(estOrderMin)}</div>
-            <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:8px;font-weight:700">受け取りまでの目安</div>
-          </div>
+        <div style="font-family:var(--font-num);font-weight:900;line-height:1;white-space:nowrap">
+          <span style="font-size:15px;color:rgba(255,255,255,.5);font-weight:700;margin-right:2px">約</span><span style="font-size:52px;color:var(--accent);text-shadow:0 0 26px rgba(95,208,255,.55)">${waitRangeLabel(estOrderMin)}</span>
         </div>
-        <div style="text-align:center;font-size:10.5px;color:rgba(255,255,255,.4);border-top:1px solid rgba(255,255,255,.12);margin-top:16px;padding-top:10px">目安です。前後する場合があります</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:10px;font-weight:700">${cookingCount}件調理中</div>
       </div>`:`
-      <div class="card" style="text-align:center;padding:26px 20px 22px;background:linear-gradient(160deg,var(--navy2),var(--navy));border:1px solid rgba(95,208,255,.28);box-shadow:0 0 30px rgba(95,208,255,.1)">
-        <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:6px">
+      <div class="card" style="text-align:center;padding:24px 20px 20px;background:linear-gradient(160deg,var(--navy2),var(--navy));border:1px solid rgba(95,208,255,.28);box-shadow:0 0 30px rgba(95,208,255,.1)">
+        <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px">
           <span style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;animation:blink 1.1s ease infinite"></span>ただいま受付中
         </div>
-        <div style="display:flex;align-items:stretch">
-          <div style="flex:1;text-align:center">
-            <div class="stat-icon" style="font-size:20px;margin-bottom:4px">👥</div>
-            <div style="font-family:var(--font-num);font-size:36px;font-weight:900;line-height:1;white-space:nowrap;color:var(--accent);text-shadow:0 0 22px rgba(95,208,255,.5)">${waitCount}</div>
-            <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:8px;font-weight:700">今、並んでいる人数</div>
-          </div>
-          <div style="width:1px;background:rgba(255,255,255,.14);margin:2px 0"></div>
-          <div style="flex:1;text-align:center">
-            <div class="stat-icon" style="font-size:20px;margin-bottom:4px">⏱️</div>
-            <div style="font-family:var(--font-num);font-size:30px;font-weight:900;line-height:1.2;white-space:nowrap;color:var(--gold);text-shadow:0 0 20px rgba(244,201,93,.5)">${waitRangeLabel(estMin)}</div>
-            <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:8px;font-weight:700">呼ばれるまでの目安</div>
-          </div>
+        <div style="font-family:var(--font-num);font-weight:900;line-height:1;white-space:nowrap">
+          <span style="font-size:15px;color:rgba(255,255,255,.5);font-weight:700;margin-right:2px">約</span><span style="font-size:52px;color:var(--gold);text-shadow:0 0 24px rgba(244,201,93,.5)">${waitRangeLabel(estMin)}</span>
         </div>
-        <div style="text-align:center;font-size:10.5px;color:rgba(255,255,255,.4);border-top:1px solid rgba(255,255,255,.12);margin-top:16px;padding-top:10px">目安です。前後する場合があります</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:10px;font-weight:700">${waitCount}人待ち</div>
       </div>`;
     const primaryCta=hasMenu?`
       <div class="card" style="margin-top:14px;text-align:center;padding:20px 20px 22px;background:linear-gradient(160deg,var(--navy2),var(--navy));border:1px solid rgba(244,201,93,.22)">
         <div style="font-family:var(--font-script);font-style:italic;font-weight:700;font-size:18px;color:#fff;opacity:.85;margin-bottom:12px">Please Order</div>
         <button class="btn" id="btn-to-order" ${!cfg.isOpen?'disabled':''} style="background:linear-gradient(135deg,var(--gold),var(--gold2));color:#2b1600;font-weight:900;box-shadow:0 6px 20px rgba(244,201,93,.25)">▶ タップして注文する</button>
       </div>
-      <div class="card" style="padding:13px 16px;display:flex;align-items:center;justify-content:space-between;margin-top:14px">
-        <div style="font-size:12.5px;color:var(--muted)">🎫 整理券：<strong style="color:var(--text)">${waitCount}人待ち</strong></div>
-        <div style="font-size:12.5px;color:var(--muted)">目安 <strong style="color:var(--gold)">${waitRangeLabel(estMin)}</strong></div>
-      </div>
-      <button class="btn btn-primary" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="margin-top:10px">整理券を取る</button>
-      ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
+      <button class="btn btn-ghost" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="margin-top:10px">🎫 整理券を取る（${waitCount}人待ち・目安${waitRangeLabel(estMin)}）</button>
+      ${cfg.reservationEnabled?`<div class="center" style="margin-top:10px"><a class="link" id="btn-to-reserve" href="javascript:void(0)">📅 予約する（時間指定）</a></div>`:''}
       `:`
       <div class="card" style="margin-top:14px;text-align:center;padding:20px 20px 22px;background:linear-gradient(160deg,var(--navy2),var(--navy));border:1px solid rgba(244,201,93,.22)">
         <div style="font-family:var(--font-script);font-style:italic;font-weight:700;font-size:18px;color:#fff;opacity:.85;margin-bottom:12px">Please Take a Ticket</div>
         <button class="btn" id="btn-to-walkin" ${!cfg.isOpen?'disabled':''} style="background:linear-gradient(135deg,var(--gold),var(--gold2));color:#2b1600;font-weight:900;box-shadow:0 6px 20px rgba(244,201,93,.25)">▶ タップして整理券を取る</button>
       </div>
-      ${cfg.reservationEnabled?`<button class="btn btn-ghost" id="btn-to-reserve" style="margin-top:10px;border-color:rgba(var(--glow),.3)">📅 予約する（時間指定）</button>`:''}
+      ${cfg.reservationEnabled?`<div class="center" style="margin-top:10px"><a class="link" id="btn-to-reserve" href="javascript:void(0)">📅 予約する（時間指定）</a></div>`:''}
       `;
     return `<div class="page">
       <div class="header">
