@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>テニス部 練習メニュー組み立て</title>
+<style>
+  :root{
+    --court:#2f6b4f;
+    --court-line:#f7f4ec;
+    --clay:#c1652f;
+    --clay-dark:#9c4d21;
+    --ink:#22301f;
+    --paper:#f7f4ec;
+    --paper-dim:#ece6d6;
+    --card:#ffffff;
+    --muted:#7c8577;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    padding-bottom:60px;
+  }
+  header{
+    background:var(--court);
+    color:var(--court-line);
+    padding:28px 20px 22px;
+    position:relative;
+    overflow:hidden;
+  }
+  header::after{
+    content:"";
+    position:absolute;
+    left:0; right:0; bottom:14px;
+    height:2px;
+    background:repeating-linear-gradient(90deg,var(--court-line) 0 24px, transparent 24px 34px);
+    opacity:.55;
+  }
+  header h1{
+    margin:0 0 4px;
+    font-size:22px;
+    letter-spacing:.03em;
+  }
+  header p{
+    margin:0;
+    font-size:13px;
+    opacity:.85;
+  }
+  .wrap{
+    max-width:1080px;
+    margin:0 auto;
+    padding:20px 16px;
+  }
+  .panel{
+    background:var(--card);
+    border-radius:10px;
+    padding:18px 20px;
+    margin-bottom:20px;
+    box-shadow:0 1px 3px rgba(0,0,0,.08);
+  }
+  .panel h2{
+    font-size:15px;
+    margin:0 0 12px;
+    color:var(--clay-dark);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .panel h2::before{
+    content:"";
+    width:8px;height:8px;
+    border-radius:50%;
+    background:var(--clay);
+    display:inline-block;
+  }
+  .chip-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-bottom:12px;
+  }
+  .chip{
+    background:var(--paper-dim);
+    border-radius:20px;
+    padding:6px 10px 6px 14px;
+    font-size:13px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .chip button{
+    background:none;
+    border:none;
+    color:var(--muted);
+    cursor:pointer;
+    font-size:14px;
+    line-height:1;
+    padding:2px;
+  }
+  .chip button:hover{color:var(--clay);}
+  .add-row{
+    display:flex;
+    gap:8px;
+  }
+  .add-row input{
+    flex:1;
+    padding:8px 10px;
+    border:1px solid #dcd6c4;
+    border-radius:6px;
+    font-size:13px;
+    font-family:inherit;
+  }
+  .add-row button{
+    background:var(--clay);
+    color:#fff;
+    border:none;
+    border-radius:6px;
+    padding:8px 16px;
+    font-size:13px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .add-row button:hover{background:var(--clay-dark);}
+
+  .day-tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:16px;
+    flex-wrap:wrap;
+  }
+  .day-tab{
+    padding:8px 16px;
+    border-radius:8px;
+    background:var(--paper-dim);
+    font-size:13px;
+    cursor:pointer;
+    border:2px solid transparent;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .day-tab.active{
+    background:var(--court);
+    color:var(--court-line);
+  }
+
+  .day-block{display:none;}
+  .day-block.active{display:block;}
+
+  .session-card{
+    background:var(--card);
+    border-radius:10px;
+    padding:16px 18px;
+    margin-bottom:16px;
+    box-shadow:0 1px 3px rgba(0,0,0,.08);
+    border-left:4px solid var(--court);
+  }
+  .session-card h3{
+    margin:0 0 12px;
+    font-size:14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .session-card h3 .badge{
+    background:var(--paper-dim);
+    padding:3px 10px;
+    border-radius:20px;
+    font-size:12px;
+    color:var(--muted);
+    font-weight:normal;
+  }
+
+  .theme-banner{
+    display:inline-block;
+    background:var(--clay);
+    color:#fff;
+    font-size:12px;
+    font-weight:600;
+    padding:5px 12px;
+    border-radius:6px;
+    margin-bottom:12px;
+  }
+  .court-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+    gap:10px;
+  }
+  .court-cell{
+    background:var(--paper);
+    border-radius:8px;
+    padding:10px 12px;
+    display:flex;
+    flex-direction:column;
+  }
+  .court-cell.g-cell{
+    background:var(--paper-dim);
+  }
+  .court-head{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .court-label{
+    width:26px;height:26px;
+    border-radius:6px;
+    background:var(--court);
+    color:var(--court-line);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:700;
+    font-size:13px;
+    flex-shrink:0;
+  }
+  .g-cell .court-label{
+    background:var(--muted);
+  }
+  .coach-select{
+    flex:1;
+    min-width:0;
+    font-size:12px;
+    padding:5px 6px;
+    border:1px solid #dcd6c4;
+    border-radius:6px;
+    font-family:inherit;
+    background:#fff;
+  }
+  .menu-list{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    margin-bottom:8px;
+  }
+  .menu-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:#fff;
+    border-radius:6px;
+    padding:5px 8px;
+    font-size:12px;
+  }
+  .menu-item button{
+    background:none;
+    border:none;
+    color:var(--muted);
+    cursor:pointer;
+    font-size:13px;
+    padding:0 2px;
+  }
+  .menu-item button:hover{color:var(--clay);}
+  .menu-add-row{
+    display:flex;
+    gap:6px;
+  }
+  .menu-add-row select{
+    flex:1;
+    min-width:0;
+    font-size:12px;
+    padding:5px 6px;
+    border:1px solid #dcd6c4;
+    border-radius:6px;
+    font-family:inherit;
+    background:#fff;
+  }
+  .menu-add-row button{
+    background:var(--court);
+    color:#fff;
+    border:none;
+    border-radius:6px;
+    padding:5px 12px;
+    font-size:12px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .menu-add-row button:hover{opacity:.9;}
+  .g-note{
+    width:100%;
+    font-size:12px;
+    padding:6px 8px;
+    border:1px solid #dcd6c4;
+    border-radius:6px;
+    font-family:inherit;
+    margin-top:4px;
+  }
+  .hint{
+    font-size:11px;
+    color:var(--muted);
+    margin-bottom:4px;
+  }
+  .empty-note{
+    color:var(--muted);
+    font-size:12px;
+    margin-top:6px;
+  }
+  .footer-note{
+    text-align:center;
+    font-size:12px;
+    color:var(--muted);
+    margin-top:24px;
+  }
+  .save-flag{
+    position:fixed;
+    bottom:16px;
+    right:16px;
+    background:var(--court);
+    color:var(--court-line);
+    padding:8px 16px;
+    border-radius:20px;
+    font-size:12px;
+    opacity:0;
+    transition:opacity .3s;
+    pointer-events:none;
+  }
+  .save-flag.show{opacity:.9;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>テニス部 練習メニュー組み立て</h1>
+  <p>8/5・8/6・8/7・8/8 の練習を、コートごとにコーチと具体的な練習メニューを組み立てます。各コマのテーマ（球出し・ラリー・サーブリターン・ボレー・試合形式）は固定表示で、その中の具体的な練習内容をコートごとにメニューとして追加していく形です。</p>
+</header>
+
+<div class="wrap">
+
+  <div class="panel">
+    <h2>メニュー一覧を編集</h2>
+    <div class="chip-row" id="menuChips"></div>
+    <div class="add-row">
+      <input id="menuInput" type="text" placeholder="例：サーブ練習、ラリー、フットワーク など">
+      <button onclick="addMenu()">追加</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>コーチ一覧を編集</h2>
+    <div class="chip-row" id="coachChips"></div>
+    <div class="add-row">
+      <input id="coachInput" type="text" placeholder="コーチの名前">
+      <button onclick="addCoach()">追加</button>
+    </div>
+  </div>
+
+  <div class="day-tabs" id="dayTabs"></div>
+  <div id="dayBlocks"></div>
+
+  <p class="footer-note">このページを開いた部員全員が同じ内容を見て編集できます（共有データとして保存されます）。</p>
+</div>
+
+<div class="save-flag" id="saveFlag">保存しました</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script>
+// ── Firebase ──────────────────────────────────────
+firebase.initializeApp({
+  apiKey:"AIzaSyCo8HLv4X8PxJmQGjhNtwePqEFLALs2vBA",
+  authDomain:"ticekets-f3625.firebaseapp.com",
+  projectId:"ticekets-f3625",
+  storageBucket:"ticekets-f3625.firebasestorage.app",
+  messagingSenderId:"463034107039",
+  appId:"1:463034107039:web:9528b908a43083f518ceaa"
+});
+const db = firebase.firestore();
+const tennisRef = db.collection('tennisMenu').doc('schedule');
+
+const DAYS = [
+  {key:'8/5', label:'8月5日', sessions:['13:30〜15:00　練習','15:30〜17:00　練習']},
+  {key:'8/6', label:'8月6日', sessions:['9:00〜10:30　練習①-1','10:30〜12:00　練習①-2','13:30〜15:00　練習②','15:30〜17:00　練習③']},
+  {key:'8/7', label:'8月7日', sessions:['9:00〜10:30　練習①-1','10:30〜12:00　練習①-2','13:30〜15:00　練習②','15:30〜17:00　練習③']},
+  {key:'8/8', label:'8月8日', sessions:['9:00〜10:30　練習①-1','10:30〜12:00　練習①-2','13:30〜15:00　練習②','15:30〜17:00　練習③']},
+];
+const COURTS = ['A','B','C','D','E','F'];
+
+// テーマは固定（編集画面のメニュー一覧には出さず、各コマの見出しに表示するだけ）
+const THEMES = {
+  '8/5-1': '球出し',
+  '8/5-2': 'ラリー',
+  '8/6-1': 'サーブ・リターン',
+  '8/6-2': 'サーブ・リターン',
+  '8/6-3': 'サーブ・リターン',
+  '8/6-4': 'サーブ・リターン',
+  '8/7-1': 'ボレー',
+  '8/7-2': 'ボレー',
+  '8/7-3': 'ボレー',
+  '8/7-4': 'ボレー',
+  '8/8-1': '試合形式(ダブルスorシングルス)',
+  '8/8-2': '試合形式(ダブルスorシングルス)',
+  '8/8-3': '試合形式(ダブルスorシングルス)',
+  '8/8-4': '試合形式(ダブルスorシングルス)',
+};
+
+let data = {
+  menus: ['サーブ練習','ストローク','フットワーク'],
+  coaches: [
+    '益子 龍人','鈴木 悠真','後藤 弘樹','植田 憲人','前田 隆之介','今田 暁広','松脇 直大','古山 颯真','新田 彗人',
+    '末吉 駆','髙橋 昂希','清水 裕晴','坂井 堅','渡部 凱','平林 蒼空','福田 康太','宮本 蒼大','田中 康晴'
+  ],
+  sessions: {
+  "8/5-1": {
+    "courts": {
+      "A": { "coach": "益子 龍人", "menus": [] },
+      "B": { "coach": "前田 隆之介", "menus": [] },
+      "C": { "coach": "福田 康太", "menus": [] },
+      "D": { "coach": "宮本 蒼大", "menus": [] },
+      "E": { "coach": "松脇 直大", "menus": [] },
+      "F": { "coach": "古山 颯真", "menus": [] }
+    },
+    "g": { "coach": "田中 康晴", "note": "" }
+  },
+  "8/5-2": {
+    "courts": {
+      "A": { "coach": "今田 暁広", "menus": [] },
+      "B": { "coach": "植田 憲人", "menus": [] },
+      "C": { "coach": "渡部 凱", "menus": [] },
+      "D": { "coach": "末吉 駆", "menus": [] },
+      "E": { "coach": "髙橋 昂希", "menus": [] },
+      "F": { "coach": "坂井 堅", "menus": [] }
+    },
+    "g": { "coach": "鈴木 悠真", "note": "" }
+  },
+  "8/6-1": {
+    "courts": {
+      "A": { "coach": "古山 颯真", "menus": [] },
+      "B": { "coach": "前田 隆之介", "menus": [] },
+      "C": { "coach": "福田 康太", "menus": [] },
+      "D": { "coach": "後藤 弘樹", "menus": [] },
+      "E": { "coach": "田中 康晴", "menus": [] },
+      "F": { "coach": "宮本 蒼大", "menus": [] }
+    },
+    "g": { "coach": "松脇 直大", "note": "" }
+  },
+  "8/6-2": {
+    "courts": {
+      "A": { "coach": "植田 憲人", "menus": [] },
+      "B": { "coach": "髙橋 昂希", "menus": [] },
+      "C": { "coach": "今田 暁広", "menus": [] },
+      "D": { "coach": "新田 彗人", "menus": [] },
+      "E": { "coach": "平林 蒼空", "menus": [] },
+      "F": { "coach": "渡部 凱", "menus": [] }
+    },
+    "g": { "coach": "益子 龍人", "note": "" }
+  },
+  "8/6-3": {
+    "courts": {
+      "A": { "coach": "鈴木 悠真", "menus": [] },
+      "B": { "coach": "清水 裕晴", "menus": [] },
+      "C": { "coach": "古山 颯真", "menus": [] },
+      "D": { "coach": "田中 康晴", "menus": [] },
+      "E": { "coach": "後藤 弘樹", "menus": [] },
+      "F": { "coach": "末吉 駆", "menus": [] }
+    },
+    "g": { "coach": "宮本 蒼大", "note": "" }
+  },
+  "8/6-4": {
+    "courts": {
+      "A": { "coach": "前田 隆之介", "menus": [] },
+      "B": { "coach": "坂井 堅", "menus": [] },
+      "C": { "coach": "今田 暁広", "menus": [] },
+      "D": { "coach": "松脇 直大", "menus": [] },
+      "E": { "coach": "新田 彗人", "menus": [] },
+      "F": { "coach": "平林 蒼空", "menus": [] }
+    },
+    "g": { "coach": "髙橋 昂希", "note": "" }
+  },
+  "8/7-1": {
+    "courts": {
+      "A": { "coach": "植田 憲人", "menus": [] },
+      "B": { "coach": "渡部 凱", "menus": [] },
+      "C": { "coach": "益子 龍人", "menus": [] },
+      "D": { "coach": "前田 隆之介", "menus": [] },
+      "E": { "coach": "宮本 蒼大", "menus": [] },
+      "F": { "coach": "後藤 弘樹", "menus": [] }
+    },
+    "g": { "coach": "田中 康晴", "note": "" }
+  },
+  "8/7-2": {
+    "courts": {
+      "A": { "coach": "新田 彗人", "menus": [] },
+      "B": { "coach": "平林 蒼空", "menus": [] },
+      "C": { "coach": "今田 暁広", "menus": [] },
+      "D": { "coach": "松脇 直大", "menus": [] },
+      "E": { "coach": "清水 裕晴", "menus": [] },
+      "F": { "coach": "末吉 駆", "menus": [] }
+    },
+    "g": { "coach": "坂井 堅", "note": "" }
+  },
+  "8/7-3": {
+    "courts": {
+      "A": { "coach": "前田 隆之介", "menus": [] },
+      "B": { "coach": "益子 龍人", "menus": [] },
+      "C": { "coach": "後藤 弘樹", "menus": [] },
+      "D": { "coach": "古山 颯真", "menus": [] },
+      "E": { "coach": "福田 康太", "menus": [] },
+      "F": { "coach": "田中 康晴", "menus": [] }
+    },
+    "g": { "coach": "宮本 蒼大", "note": "" }
+  },
+  "8/7-4": {
+    "courts": {
+      "A": { "coach": "新田 彗人", "menus": [] },
+      "B": { "coach": "鈴木 悠真", "menus": [] },
+      "C": { "coach": "今田 暁広", "menus": [] },
+      "D": { "coach": "末吉 駆", "menus": [] },
+      "E": { "coach": "渡部 凱", "menus": [] },
+      "F": { "coach": "清水 裕晴", "menus": [] }
+    },
+    "g": { "coach": "植田 憲人", "note": "" }
+  },
+  "8/8-1": {
+    "courts": {
+      "A": { "coach": "益子 龍人", "menus": [] },
+      "B": { "coach": "鈴木 悠真", "menus": [] },
+      "C": { "coach": "古山 颯真", "menus": [] },
+      "D": { "coach": "髙橋 昂希", "menus": [] },
+      "E": { "coach": "坂井 堅", "menus": [] },
+      "F": { "coach": "前田 隆之介", "menus": [] }
+    },
+    "g": { "coach": "平林 蒼空", "note": "" }
+  },
+  "8/8-2": {
+    "courts": {
+      "A": { "coach": "後藤 弘樹", "menus": [] },
+      "B": { "coach": "末吉 駆", "menus": [] },
+      "C": { "coach": "新田 彗人", "menus": [] },
+      "D": { "coach": "植田 憲人", "menus": [] },
+      "E": { "coach": "渡部 凱", "menus": [] },
+      "F": { "coach": "清水 裕晴", "menus": [] }
+    },
+    "g": { "coach": "福田 康太", "note": "" }
+  },
+  "8/8-3": {
+    "courts": {
+      "A": { "coach": "古山 颯真", "menus": [] },
+      "B": { "coach": "渡部 凱", "menus": [] },
+      "C": { "coach": "益子 龍人", "menus": [] },
+      "D": { "coach": "平林 蒼空", "menus": [] },
+      "E": { "coach": "後藤 弘樹", "menus": [] },
+      "F": { "coach": "髙橋 昂希", "menus": [] }
+    },
+    "g": { "coach": "前田 隆之介", "note": "" }
+  },
+  "8/8-4": {
+    "courts": {
+      "A": { "coach": "今田 暁広", "menus": [] },
+      "B": { "coach": "末吉 駆", "menus": [] },
+      "C": { "coach": "坂井 堅", "menus": [] },
+      "D": { "coach": "新田 彗人", "menus": [] },
+      "E": { "coach": "鈴木 悠真", "menus": [] },
+      "F": { "coach": "植田 憲人", "menus": [] }
+    },
+    "g": { "coach": "清水 裕晴", "note": "" }
+  }
+}
+};
+
+function sessionId(day, idx){ return day + '-' + idx; }
+
+function ensureSession(id){
+  if(!data.sessions[id]){
+    data.sessions[id] = { courts:{}, g:{coach:'', note:''} };
+  }
+  const s = data.sessions[id];
+  if(!s.courts) s.courts = {};
+  COURTS.forEach(c=>{
+    if(!s.courts[c] || typeof s.courts[c] !== 'object'){
+      s.courts[c] = {coach:'', menus:[]};
+    }
+    if(!Array.isArray(s.courts[c].menus)) s.courts[c].menus = [];
+  });
+  if(!s.g) s.g = {coach:'', note:''};
+  return s;
+}
+
+async function loadData(){
+  try{
+    const snap = await tennisRef.get();
+    if(snap.exists){
+      const parsed = snap.data() || {};
+      data.menus = parsed.menus && parsed.menus.length ? parsed.menus : data.menus;
+      data.coaches = parsed.coaches && parsed.coaches.length ? parsed.coaches : data.coaches;
+      data.sessions = parsed.sessions ? JSON.parse(parsed.sessions) : data.sessions;
+    }
+  }catch(e){
+    console.log('no existing data yet, using defaults', e);
+  }
+  render();
+}
+
+let saveTimer = null;
+async function saveData(){
+  try{
+    await tennisRef.set({
+      menus: data.menus,
+      coaches: data.coaches,
+      sessions: JSON.stringify(data.sessions)
+    });
+    flagSaved();
+  }catch(e){
+    console.error('save failed', e);
+  }
+}
+function saveDataDebounced(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveData, 300);
+}
+function flagSaved(){
+  const el = document.getElementById('saveFlag');
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 900);
+}
+
+function addMenu(){
+  const input = document.getElementById('menuInput');
+  const val = input.value.trim();
+  if(!val) return;
+  if(data.menus.includes(val)){ input.value=''; return; }
+  data.menus.push(val);
+  input.value='';
+  render();
+  saveDataDebounced();
+}
+function removeMenu(name){
+  data.menus = data.menus.filter(m=>m!==name);
+  Object.values(data.sessions).forEach(s=>{
+    if(!s.courts) return;
+    Object.keys(s.courts).forEach(c=>{
+      if(Array.isArray(s.courts[c].menus)){
+        s.courts[c].menus = s.courts[c].menus.filter(m=>m!==name);
+      }
+    });
+  });
+  render();
+  saveDataDebounced();
+}
+function addCoach(){
+  const input = document.getElementById('coachInput');
+  const val = input.value.trim();
+  if(!val) return;
+  if(data.coaches.includes(val)){ input.value=''; return; }
+  data.coaches.push(val);
+  input.value='';
+  render();
+  saveDataDebounced();
+}
+function removeCoach(name){
+  data.coaches = data.coaches.filter(c=>c!==name);
+  Object.values(data.sessions).forEach(s=>{
+    if(s.courts){
+      Object.keys(s.courts).forEach(c=>{
+        if(s.courts[c].coach===name) s.courts[c].coach='';
+      });
+    }
+    if(s.g && s.g.coach===name) s.g.coach='';
+  });
+  render();
+  saveDataDebounced();
+}
+
+function setCourtCoach(id, court, val){
+  ensureSession(id).courts[court].coach = val;
+  saveDataDebounced();
+}
+function addCourtMenu(id, court, val){
+  if(!val) return;
+  ensureSession(id).courts[court].menus.push(val);
+  render();
+  saveDataDebounced();
+}
+function removeCourtMenu(id, court, idx){
+  ensureSession(id).courts[court].menus.splice(idx,1);
+  render();
+  saveDataDebounced();
+}
+function setGCoach(id, val){
+  ensureSession(id).g.coach = val;
+  saveDataDebounced();
+}
+function setGNote(id, val){
+  ensureSession(id).g.note = val;
+  saveDataDebounced();
+}
+
+let activeDay = DAYS[0].key;
+function switchDay(key){
+  activeDay = key;
+  render();
+}
+
+function render(){
+  const menuChips = document.getElementById('menuChips');
+  menuChips.innerHTML = data.menus.length
+    ? data.menus.map(m=>`<span class="chip">${escapeHtml(m)}<button onclick="removeMenu('${escapeAttr(m)}')">×</button></span>`).join('')
+    : '<span class="empty-note">まだメニューがありません</span>';
+
+  const coachChips = document.getElementById('coachChips');
+  coachChips.innerHTML = data.coaches.length
+    ? data.coaches.map(c=>`<span class="chip">${escapeHtml(c)}<button onclick="removeCoach('${escapeAttr(c)}')">×</button></span>`).join('')
+    : '<span class="empty-note">まだコーチがいません</span>';
+
+  const tabs = document.getElementById('dayTabs');
+  tabs.innerHTML = DAYS.map(d=>
+    `<div class="day-tab ${d.key===activeDay?'active':''}" onclick="switchDay('${d.key}')">${d.label}</div>`
+  ).join('');
+
+  const blocks = document.getElementById('dayBlocks');
+  blocks.innerHTML = DAYS.map(d=>{
+    let sessionsHtml = '';
+    for(let i=1;i<=d.sessions.length;i++){
+      const timeLabel = d.sessions[i-1];
+      const id = sessionId(d.key, i);
+      const s = ensureSession(id);
+
+      const coachOptionsFor = (selected)=>['<option value="">未定</option>']
+        .concat(data.coaches.map(c=>`<option value="${escapeAttr(c)}" ${selected===c?'selected':''}>${escapeHtml(c)}</option>`))
+        .join('');
+
+      const menuOptionsPlain = data.menus.map(m=>`<option value="${escapeAttr(m)}">${escapeHtml(m)}</option>`).join('');
+
+      const courtCells = COURTS.map(court=>{
+        const cd = s.courts[court];
+        const listHtml = cd.menus.length
+          ? cd.menus.map((m,idx)=>`<div class="menu-item"><span>${idx+1}. ${escapeHtml(m)}</span><button onclick="removeCourtMenu('${id}','${court}',${idx})">×</button></div>`).join('')
+          : '<div class="hint">メニュー未設定</div>';
+        const addSelectId = `add-${id}-${court}`;
+        return `
+          <div class="court-cell">
+            <div class="court-head">
+              <div class="court-label">${court}</div>
+              <select class="coach-select" onchange="setCourtCoach('${id}','${court}', this.value)">${coachOptionsFor(cd.coach)}</select>
+            </div>
+            <div class="menu-list">${listHtml}</div>
+            <div class="menu-add-row">
+              <select id="${addSelectId}">${menuOptionsPlain || '<option value="">メニューなし</option>'}</select>
+              <button onclick="addCourtMenu('${id}','${court}', document.getElementById('${addSelectId}').value)">＋追加</button>
+            </div>
+          </div>`;
+      }).join('');
+
+      const gCell = `
+        <div class="court-cell g-cell">
+          <div class="court-head">
+            <div class="court-label">G</div>
+            <select class="coach-select" onchange="setGCoach('${id}', this.value)">${coachOptionsFor(s.g.coach)}</select>
+          </div>
+          <div class="hint">Gコートはメニュー設定なし</div>
+          <input class="g-note" type="text" placeholder="メモ（任意）" value="${escapeAttr(s.g.note||'')}" onchange="setGNote('${id}', this.value)">
+        </div>`;
+
+      const theme = THEMES[id];
+      const themeBanner = theme ? `<div class="theme-banner">テーマ：${escapeHtml(theme)}</div>` : '';
+
+      sessionsHtml += `
+        <div class="session-card">
+          <h3>${escapeHtml(timeLabel)}</h3>
+          ${themeBanner}
+          <div class="court-grid">
+            ${courtCells}
+            ${gCell}
+          </div>
+        </div>`;
+    }
+    return `<div class="day-block ${d.key===activeDay?'active':''}">${sessionsHtml}</div>`;
+  }).join('');
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
+function escapeAttr(str){
+  return String(str).replace(/'/g, "\\'");
+}
+
+// 画面が真っ白にならないよう、まず手元のデータで即座に描画し、
+// その後クラウドの共有データが取得できたら改めて描画し直す
+window.addEventListener('error', function(e){
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;padding:10px;font-size:12px;z-index:9999;';
+  box.textContent = '表示エラーが発生しました: ' + (e.message || e);
+  document.body.prepend(box);
+});
+
+render();
+loadData();
+</script>
+
+</body>
+</html>

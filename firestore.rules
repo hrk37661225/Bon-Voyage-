@@ -29,5 +29,10 @@ service cloud.firestore {
     match /orders/{id} {
       allow read, write: if true;
     }
+
+    // テニス部 練習メニュー組み立てページ用の共有データ (部員全員が読み書き可)
+    match /tennisMenu/{id} {
+      allow read, write: if true;
+    }
   }
 }
